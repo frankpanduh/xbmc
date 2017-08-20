@@ -82,11 +82,11 @@ done
 echo "Package $EXTERNAL_LIBS/lib/python2.7"
 mkdir -p "$TARGET_FRAMEWORKS/lib"
 PYTHONSYNC="rsync -aq --exclude .DS_Store --exclude *.a --exclude *.exe --exclude test --exclude tests"
-${PYTHONSYNC} "$EXTERNAL_LIBS/lib/python2.7" "$TARGET_FRAMEWORKS/lib/"
-rm -rf "$TARGET_FRAMEWORKS/lib/python2.7/config"
+${PYTHONSYNC} "$EXTERNAL_LIBS/lib/python3.7" "$TARGET_FRAMEWORKS/lib/"
+rm -rf "$TARGET_FRAMEWORKS/lib/python3.7/config"
 
 echo "Checking python *.so for dylib dependencies"
-check_xbmc_dylib_depends "$TARGET_FRAMEWORKS"/lib/python2.7 "*.so"
+check_xbmc_dylib_depends "$TARGET_FRAMEWORKS"/lib/python3.7 "*.so"
 
 echo "Checking system *.so for dylib dependencies"
 check_xbmc_dylib_depends "$XBMC_HOME"/system "*.so"
