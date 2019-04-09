@@ -13,11 +13,14 @@
 #include "utils/URIUtils.h"
 #include "CompileInfo.h"
 
-#if defined(TARGET_DARWIN_IOS)
+#if defined(TARGET_DARWIN_IOS) || defined(TARGET_DARWIN_TVOS)
   #import <Foundation/Foundation.h>
   #import <UIKit/UIKit.h>
   #import <mach/mach_host.h>
   #import <sys/sysctl.h>
+  #ifdef TARGET_DARWIN_TVOS
+    #import "platform/darwin/tvos/MainController.h"
+  #endif
 #else
   #import <Cocoa/Cocoa.h>
   #import <CoreFoundation/CoreFoundation.h>
@@ -116,7 +119,7 @@ const char* CDarwinUtils::getIosPlatformString(void)
   static std::string iOSPlatformString;
   if (iOSPlatformString.empty())
   {
-#if defined(TARGET_DARWIN_IOS)
+#if defined(TARGET_DARWIN_IOS) || defined(TARGET_DARWIN_TVOS)
     // Gets a string with the device model
     size_t size;
     sysctlbyname("hw.machine", NULL, &size, NULL, 0);
@@ -127,7 +130,7 @@ const char* CDarwinUtils::getIosPlatformString(void)
 #endif
       iOSPlatformString = "unknown0,0";
 
-#if defined(TARGET_DARWIN_IOS)
+#if defined(TARGET_DARWIN_IOS) || defined(TARGET_DARWIN_TVOS)
     delete [] machine;
 #endif
   }
@@ -138,7 +141,7 @@ const char* CDarwinUtils::getIosPlatformString(void)
 enum iosPlatform getIosPlatform()
 {
   static enum iosPlatform eDev = iDeviceUnknown;
-#if defined(TARGET_DARWIN_IOS)
+#if defined(TARGET_DARWIN_IOS) || defined(TARGET_DARWIN_TVOS)
   if (eDev == iDeviceUnknown)
   {
     std::string devStr(CDarwinUtils::getIosPlatformString());
@@ -283,9 +286,22 @@ const char *CDarwinUtils::GetOSVersionString(void)
   return [[[NSProcessInfo processInfo] operatingSystemVersionString] UTF8String];
 }
 
+float CDarwinUtils::GetIOSVersion(void)
+{
+  CCocoaAutoPool pool;
+  float version;
+#if defined(TARGET_DARWIN_IOS) || defined(TARGET_DARWIN_TVOS)
+  version = [[[UIDevice currentDevice] systemVersion] floatValue];
+#else
+  version = 0.0f;
+#endif
+
+  return version;
+}
+
 const char *CDarwinUtils::GetIOSVersionString(void)
 {
-#if defined(TARGET_DARWIN_IOS)
+#if defined(TARGET_DARWIN_IOS) || defined(TARGET_DARWIN_TVOS)
   static std::string iOSVersionString;
   if (iOSVersionString.empty())
   {
@@ -331,7 +347,7 @@ int  CDarwinUtils::GetFrameworkPath(bool forPython, char* path, size_t *pathsize
   {
     strcpy(path, [pathname UTF8String]);
     // Move backwards to last "/"
-    for (int n=strlen(path)-1; path[n] != '/'; n--)
+    for (size_t n = strlen(path)-1; path[n] != '/'; n--)
       path[n] = '\0';
     strcat(path, "Frameworks");
     *pathsize = strlen(path);
@@ -398,10 +414,17 @@ const char* CDarwinUtils::GetAppRootFolder(void)
   {
     if (IsIosSandboxed())
     {
+#ifdef TARGET_DARWIN_TVOS
+      // writing to Documents is prohibited, more info:
+      // https://developer.apple.com/library/archive/documentation/General/Conceptual/AppleTV_PG/index.html#//apple_ref/doc/uid/TP40015241-CH12-SW5
+      // https://forums.developer.apple.com/thread/89008
+      rootFolder = "Library/Caches";
+#else
       // when we are sandbox make documents our root
       // so that user can access everything he needs
       // via itunes sharing
       rootFolder = "Documents";
+#endif
     }
     else
     {
@@ -456,7 +479,7 @@ int CDarwinUtils::BatteryLevel(void)
   float batteryLevel = 0;
 #if defined(TARGET_DARWIN_IOS)
   batteryLevel = [[UIDevice currentDevice] batteryLevel];
-#else
+#elif defined(TARGET_DARWIN_OSX)
   CFTypeRef powerSourceInfo = IOPSCopyPowerSourcesInfo();
   CFArrayRef powerSources = IOPSCopyPowerSourcesList(powerSourceInfo);
 
@@ -489,12 +512,19 @@ int CDarwinUtils::BatteryLevel(void)
 
 void CDarwinUtils::EnableOSScreenSaver(bool enable)
 {
-
+#if defined(TARGET_DARWIN_TVOS)
+  if (enable)
+    [g_xbmcController enableScreenSaver];
+  else
+    [g_xbmcController disableScreenSaver];
+#endif
 }
 
 void CDarwinUtils::ResetSystemIdleTimer()
 {
-
+#if defined(TARGET_DARWIN_TVOS)
+  [g_xbmcController resetSystemIdleTimer];
+#endif
 }
 
 void CDarwinUtils::SetScheduling(bool realtime)
@@ -571,7 +601,7 @@ const std::string& CDarwinUtils::GetManufacturer(void)
   static std::string manufName;
   if (manufName.empty())
   {
-#ifdef TARGET_DARWIN_IOS
+#if defined(TARGET_DARWIN_IOS) || defined(TARGET_DARWIN_TVOS)
     // to avoid dlloading of IOIKit, hardcode return value
 	// until other than Apple devices with iOS will be released
     manufName = "Apple Inc.";
@@ -625,7 +655,6 @@ bool CDarwinUtils::IsAliasShortcut(const std::string& path, bool isdirectory)
   }
 
   NSNumber* wasAliased = nil;
-
   if (nsUrl != nil)
   {
     NSError *error = nil;
@@ -642,6 +671,8 @@ bool CDarwinUtils::IsAliasShortcut(const std::string& path, bool isdirectory)
 void CDarwinUtils::TranslateAliasShortcut(std::string& path)
 {
 #if defined(TARGET_DARWIN_OSX)
+  CCocoaAutoPool pool;
+
   NSString *nsPath = [NSString stringWithUTF8String:path.c_str()];
   NSURL *nsUrl = [NSURL fileURLWithPath:nsPath];
 
@@ -674,6 +705,8 @@ bool CDarwinUtils::CreateAliasShortcut(const std::string& fromPath, const std::s
 {
   bool ret = false;
 #if defined(TARGET_DARWIN_OSX)
+  CCocoaAutoPool pool;
+
   NSString *nsToPath = [NSString stringWithUTF8String:toPath.c_str()];
   NSURL *toUrl = [NSURL fileURLWithPath:nsToPath];
   NSString *nsFromPath = [NSString stringWithUTF8String:fromPath.c_str()];

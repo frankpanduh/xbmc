@@ -36,10 +36,6 @@
 #include "utils/Variant.h"
 #include "utils/XMLUtils.h"
 
-#if defined(TARGET_DARWIN_IOS)
-#include "platform/darwin/DarwinUtils.h"
-#endif
-
 using namespace ADDON;
 using namespace XFILE;
 
@@ -369,7 +365,7 @@ void CAdvancedSettings::Initialize()
   m_curlDisableIPV6 = false;      //Certain hardware/OS combinations have trouble
                                   //with ipv6.
 
-#if defined(TARGET_DARWIN_IOS)
+#if defined(TARGET_DARWIN_IOS) || defined(TARGET_DARWIN_TVOS)
   m_startFullScreen = true;
 #else
   m_startFullScreen = false;
