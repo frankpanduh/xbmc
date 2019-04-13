@@ -1006,7 +1006,7 @@ MainController *g_xbmcController;
             XBMCKey key = [self getPanDirectionKey:gesturePoint];
             
             // ignore UP/DOWN swipes while in full screen playback
-            if (g_windowManager.GetFocusedWindow() != WINDOW_FULLSCREEN_VIDEO ||
+            if (CServiceBroker::GetGUI()->GetWindowManager().GetActiveWindowOrDialog() != WINDOW_FULLSCREEN_VIDEO ||
                 key == XBMCK_LEFT ||
                 key == XBMCK_RIGHT)
             {
@@ -1194,10 +1194,6 @@ MainController *g_xbmcController;
 
   [self enableScreenSaver];
 
-  NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
-  [center addObserver: self
-     selector: @selector(observeDefaultCenterStuff:) name: nil object: nil];
-
   [m_window makeKeyAndVisible];
   g_xbmcController = self;
 
@@ -1218,18 +1214,12 @@ MainController *g_xbmcController;
   [m_glView release];
   [m_window release];
   
-  NSNotificationCenter *center;
-  // take us off the default center for our app
-  center = [NSNotificationCenter defaultCenter];
-  [center removeObserver: self];
-  
   [super dealloc];
 }
 //--------------------------------------------------------------
 - (void)loadView
 {
-  [super loadView];
-
+  self.view = [[[UIView alloc] initWithFrame:m_window.bounds] autorelease];
   self.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
   self.view.autoresizesSubviews = YES;
   
@@ -1238,16 +1228,12 @@ MainController *g_xbmcController;
   // Check if screen is Retina
   m_screenScale = [m_glView getScreenScale:[UIScreen mainScreen]];
   [self.view addSubview: m_glView];
-}
-//--------------------------------------------------------------
-- (void)viewDidLoad
-{
-  [super viewDidLoad];
   
   [self createSwipeGestureRecognizers];
   [self createPanGestureRecognizers];
   [self createPressGesturecognizers];
   [self createTapGesturecognizers];
+
   if (__builtin_available(tvOS 11.2, *))
   {
     if ([m_window respondsToSelector:@selector(avDisplayManager)])
@@ -1268,7 +1254,7 @@ MainController *g_xbmcController;
 {
   [super viewDidAppear:animated];
   [self becomeFirstResponder];
-  [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
+  [[UIApplication sharedApplication] beginReceivingRemoteControlEvents]; // @todo MPRemoteCommandCenter
 }
 //--------------------------------------------------------------
 - (void)viewWillDisappear:(BOOL)animated
@@ -1999,16 +1985,11 @@ int KODI_Run(bool renderGUI)
 }
 
 #pragma mark - private helper methods
-- (void)observeDefaultCenterStuff:(NSNotification *)notification
-{
-//  LOG(@"default: %@", [notification name]);
-//  LOG(@"userInfo: %@", [notification userInfo]);
-}
   
-  - (void*) getEAGLContextObj
-  {
+- (void*) getEAGLContextObj
+{
     return [m_glView getCurrentEAGLContext];
-  }
+}
 
 @end
 #undef BOOL
