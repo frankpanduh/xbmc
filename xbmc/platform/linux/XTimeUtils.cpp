@@ -1,3 +1,7 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+
 /*
  *  Copyright (C) 2005-2018 Team Kodi
  *  This file is part of Kodi - https://kodi.tv
@@ -6,214 +10,167 @@
  *  See LICENSES/README.md for more information.
  */
 
-#include "XTimeUtils.h"
-#include "LinuxTimezone.h"
+#include "XMemUtils.h"
+#include "Util.h"
 
 #if defined(TARGET_DARWIN)
-#include "threads/Atomics.h"
+#include <mach/mach.h>
 #endif
 
-#if defined(TARGET_ANDROID) && !defined(__LP64__)
-#include <time64.h>
-#endif
+#undef ALIGN
+#define ALIGN(value, alignment) (((value)+(alignment-1))&~(alignment-1))
 
-#include <errno.h>
-#include <time.h>
-#include <unistd.h>
-#include <sys/times.h>
-#include <sched.h>
+// aligned memory allocation.
+// in order to do so - we alloc extra space and store the original allocation in it (so that we can free later on).
+// the returned address will be the nearest aligned address within the space allocated.
+void *_aligned_malloc(size_t s, size_t alignTo) {
 
-#define WIN32_TIME_OFFSET ((unsigned long long)(369 * 365 + 89) * 24 * 3600 * 10000000)
+  char *pFull = (char*)malloc(s + alignTo + sizeof(char *));
+  char *pAligned = (char *)ALIGN(((unsigned long)pFull + sizeof(char *)), alignTo);
 
-/*
- * A Leap year is any year that is divisible by four, but not by 100 unless also
- * divisible by 400
- */
-#define IsLeapYear(y) ((!(y % 4)) ? (((!(y % 400)) && (y % 100)) ? 1 : 0) : 0)
+  *(char **)(pAligned - sizeof(char*)) = pFull;
 
-void WINAPI Sleep(uint32_t dwMilliSeconds)
-{
-#if _POSIX_PRIORITY_SCHEDULING
-  if(dwMilliSeconds == 0)
-  {
-    sched_yield();
+  return(pAligned);
+}
+
+void _aligned_free(void *p) {
+  if (!p)
     return;
+
+  char *pFull = *(char **)(((char *)p) - sizeof(char *));
+  free(pFull);
+}
+
+#if defined(TARGET_POSIX) && !defined(TARGET_DARWIN) && !defined(TARGET_FREEBSD)
+static FILE* procMeminfoFP = NULL;
+#endif
+
+void GlobalMemoryStatusEx(LPMEMORYSTATUSEX lpBuffer)
+{
+  if (!lpBuffer)
+    return;
+
+  memset(lpBuffer, 0, sizeof(MEMORYSTATUSEX));
+  lpBuffer->dwLength = sizeof(MEMORYSTATUSEX);
+
+#if defined(TARGET_DARWIN)
+  uint64_t physmem;
+  size_t len = sizeof physmem;
+  int mib[2] = { CTL_HW, HW_MEMSIZE };
+  size_t miblen = ARRAY_SIZE(mib);
+
+  // Total physical memory.
+  if (sysctl(mib, miblen, &physmem, &len, NULL, 0) == 0 && len == sizeof (physmem))
+      lpBuffer->ullTotalPhys = physmem;
+
+  // Virtual memory.
+  mib[0] = CTL_VM; mib[1] = VM_SWAPUSAGE;
+  struct xsw_usage swap;
+  len = sizeof(struct xsw_usage);
+  if (sysctl(mib, miblen, &swap, &len, NULL, 0) == 0)
+  {
+      lpBuffer->ullAvailPageFile = swap.xsu_avail;
+      lpBuffer->ullTotalVirtual = lpBuffer->ullTotalPhys + swap.xsu_total;
   }
-#endif
 
-  usleep(dwMilliSeconds * 1000);
-}
-
-void GetLocalTime(LPSYSTEMTIME sysTime)
-{
-  const time_t t = time(NULL);
-  struct tm now;
-
-  localtime_r(&t, &now);
-  sysTime->wYear = now.tm_year + 1900;
-  sysTime->wMonth = now.tm_mon + 1;
-  sysTime->wDayOfWeek = now.tm_wday;
-  sysTime->wDay = now.tm_mday;
-  sysTime->wHour = now.tm_hour;
-  sysTime->wMinute = now.tm_min;
-  sysTime->wSecond = now.tm_sec;
-  sysTime->wMilliseconds = 0;
-  // NOTE: localtime_r() is not required to set this, but we Assume that it's set here.
-  g_timezone.m_IsDST = now.tm_isdst;
-}
-
-int FileTimeToLocalFileTime(const FILETIME* lpFileTime, LPFILETIME lpLocalFileTime)
-{
-  ULARGE_INTEGER l;
-  l.u.LowPart = lpFileTime->dwLowDateTime;
-  l.u.HighPart = lpFileTime->dwHighDateTime;
-
-  time_t ft;
-  struct tm tm_ft;
-  FileTimeToTimeT(lpFileTime, &ft);
-  localtime_r(&ft, &tm_ft);
-
-  l.QuadPart += static_cast<unsigned long long>(tm_ft.tm_gmtoff) * 10000000;
-
-  lpLocalFileTime->dwLowDateTime = l.u.LowPart;
-  lpLocalFileTime->dwHighDateTime = l.u.HighPart;
-  return 1;
-}
-
-int SystemTimeToFileTime(const SYSTEMTIME* lpSystemTime,  LPFILETIME lpFileTime)
-{
-  static const int dayoffset[12] = {0, 31, 59, 90, 120, 151, 182, 212, 243, 273, 304, 334};
-#if defined(TARGET_DARWIN)
-  static std::atomic_flag timegm_lock = ATOMIC_FLAG_INIT;
-#endif
-
-  struct tm sysTime = {};
-  sysTime.tm_year = lpSystemTime->wYear - 1900;
-  sysTime.tm_mon = lpSystemTime->wMonth - 1;
-  sysTime.tm_wday = lpSystemTime->wDayOfWeek;
-  sysTime.tm_mday = lpSystemTime->wDay;
-  sysTime.tm_hour = lpSystemTime->wHour;
-  sysTime.tm_min = lpSystemTime->wMinute;
-  sysTime.tm_sec = lpSystemTime->wSecond;
-  sysTime.tm_yday = dayoffset[sysTime.tm_mon] + (sysTime.tm_mday - 1);
-  sysTime.tm_isdst = g_timezone.m_IsDST;
-
-  // If this is a leap year, and we're past the 28th of Feb, increment tm_yday.
-  if (IsLeapYear(lpSystemTime->wYear) && (sysTime.tm_yday > 58))
-    sysTime.tm_yday++;
-
-#if defined(TARGET_DARWIN)
-  CAtomicSpinLock lock(timegm_lock);
-#endif
-
-#if defined(TARGET_ANDROID) && !defined(__LP64__)
-  time64_t t = timegm64(&sysTime);
+  // In use.
+  mach_port_t stat_port = mach_host_self();
+  vm_statistics_data_t vm_stat;
+  mach_msg_type_number_t count = sizeof(vm_stat) / sizeof(natural_t);
+  if (host_statistics(stat_port, HOST_VM_INFO, (host_info_t)&vm_stat, &count) == 0)
+  {
+      // Find page size.
+#if defined(TARGET_DARWIN_EMBEDDED)
+      // on ios with 64bit ARM CPU the page size is wrongly given as 16K
+      // when using the sysctl approach. We can use the host_page_size
+      // function instead which will give the proper 4k pagesize
+      // on both 32 and 64 bit ARM CPUs
+      vm_size_t pageSize;
+      host_page_size(stat_port, &pageSize);
 #else
-  time_t t = timegm(&sysTime);
+      int pageSize;
+      mib[0] = CTL_HW; mib[1] = HW_PAGESIZE;
+      len = sizeof(int);
+      if (sysctl(mib, miblen, &pageSize, &len, NULL, 0) == 0)
 #endif
+      {
+          uint64_t used = (vm_stat.active_count + vm_stat.inactive_count + vm_stat.wire_count) * pageSize;
 
-  LARGE_INTEGER result;
-  result.QuadPart = (long long) t * 10000000 + (long long) lpSystemTime->wMilliseconds * 10000;
-  result.QuadPart += WIN32_TIME_OFFSET;
+          lpBuffer->ullAvailPhys = lpBuffer->ullTotalPhys - used;
+          lpBuffer->ullAvailVirtual  = lpBuffer->ullAvailPhys; // FIXME.
+      }
+  }
+#elif defined(TARGET_FREEBSD)
+  /* sysctl hw.physmem */
+  size_t physmem = 0, mem_free = 0, pagesize = 0, swap_free = 0;
+  size_t mem_inactive = 0, mem_cache = 0, len = 0;
 
-  lpFileTime->dwLowDateTime = result.u.LowPart;
-  lpFileTime->dwHighDateTime = result.u.HighPart;
+  /* physmem */
+  len = sizeof(physmem);
+  if (sysctlbyname("hw.physmem", &physmem, &len, NULL, 0) == 0) {
+    lpBuffer->ullTotalPhys = physmem;
+    lpBuffer->ullTotalVirtual = physmem;
+  }
+  /* pagesize */
+  len = sizeof(pagesize);
+  if (sysctlbyname("hw.pagesize", &pagesize, &len, NULL, 0) != 0)
+    pagesize = 4096;
+  /* mem_inactive */
+  len = sizeof(mem_inactive);
+  if (sysctlbyname("vm.stats.vm.v_inactive_count", &mem_inactive, &len, NULL, 0) == 0)
+    mem_inactive *= pagesize;
+  /* mem_cache */
+  len = sizeof(mem_cache);
+  if (sysctlbyname("vm.stats.vm.v_cache_count", &mem_cache, &len, NULL, 0) == 0)
+    mem_cache *= pagesize;
+  /* mem_free */
+  len = sizeof(mem_free);
+  if (sysctlbyname("vm.stats.vm.v_free_count", &mem_free, &len, NULL, 0) == 0)
+    mem_free *= pagesize;
 
-  return 1;
-}
+  /* mem_avail = mem_inactive + mem_cache + mem_free */
+  lpBuffer->ullAvailPhys = mem_inactive + mem_cache + mem_free;
+  lpBuffer->ullAvailVirtual = mem_inactive + mem_cache + mem_free;
 
-long CompareFileTime(const FILETIME* lpFileTime1, const FILETIME* lpFileTime2)
-{
-  ULARGE_INTEGER t1;
-  t1.u.LowPart = lpFileTime1->dwLowDateTime;
-  t1.u.HighPart = lpFileTime1->dwHighDateTime;
-
-  ULARGE_INTEGER t2;
-  t2.u.LowPart = lpFileTime2->dwLowDateTime;
-  t2.u.HighPart = lpFileTime2->dwHighDateTime;
-
-  if (t1.QuadPart == t2.QuadPart)
-     return 0;
-  else if (t1.QuadPart < t2.QuadPart)
-     return -1;
+  if (sysctlbyname("vm.stats.vm.v_swappgsout", &swap_free, &len, NULL, 0) == 0)
+    lpBuffer->ullAvailPageFile = swap_free * pagesize;
+#else
+  struct sysinfo info;
+  char name[32];
+  unsigned val;
+  if (!procMeminfoFP && (procMeminfoFP = fopen("/proc/meminfo", "r")) == NULL)
+    sysinfo(&info);
   else
-     return 1;
-}
-
-int FileTimeToSystemTime( const FILETIME* lpFileTime, LPSYSTEMTIME lpSystemTime)
-{
-  LARGE_INTEGER fileTime;
-  fileTime.u.LowPart = lpFileTime->dwLowDateTime;
-  fileTime.u.HighPart = lpFileTime->dwHighDateTime;
-
-  fileTime.QuadPart -= WIN32_TIME_OFFSET;
-  fileTime.QuadPart /= 10000; /* to milliseconds */
-  lpSystemTime->wMilliseconds = fileTime.QuadPart % 1000;
-  fileTime.QuadPart /= 1000; /* to seconds */
-
-  time_t ft = fileTime.QuadPart;
-
-  struct tm tm_ft;
-  gmtime_r(&ft,&tm_ft);
-
-  lpSystemTime->wYear = tm_ft.tm_year + 1900;
-  lpSystemTime->wMonth = tm_ft.tm_mon + 1;
-  lpSystemTime->wDayOfWeek = tm_ft.tm_wday;
-  lpSystemTime->wDay = tm_ft.tm_mday;
-  lpSystemTime->wHour = tm_ft.tm_hour;
-  lpSystemTime->wMinute = tm_ft.tm_min;
-  lpSystemTime->wSecond = tm_ft.tm_sec;
-
-  return 1;
-}
-
-int LocalFileTimeToFileTime( const FILETIME* lpLocalFileTime, LPFILETIME lpFileTime)
-{
-  ULARGE_INTEGER l;
-  l.u.LowPart = lpLocalFileTime->dwLowDateTime;
-  l.u.HighPart = lpLocalFileTime->dwHighDateTime;
-
-  l.QuadPart += (unsigned long long) timezone * 10000000;
-
-  lpFileTime->dwLowDateTime = l.u.LowPart;
-  lpFileTime->dwHighDateTime = l.u.HighPart;
-
-  return 1;
-}
-
-int FileTimeToTimeT(const FILETIME* lpLocalFileTime, time_t *pTimeT) {
-
-  if (lpLocalFileTime == NULL || pTimeT == NULL)
-  return false;
-
-  ULARGE_INTEGER fileTime;
-  fileTime.u.LowPart  = lpLocalFileTime->dwLowDateTime;
-  fileTime.u.HighPart = lpLocalFileTime->dwHighDateTime;
-
-  fileTime.QuadPart -= WIN32_TIME_OFFSET;
-  fileTime.QuadPart /= 10000; /* to milliseconds */
-  fileTime.QuadPart /= 1000; /* to seconds */
-
-  time_t ft = fileTime.QuadPart;
-
-  struct tm tm_ft;
-  localtime_r(&ft,&tm_ft);
-
-  *pTimeT = mktime(&tm_ft);
-  return 1;
-}
-
-int TimeTToFileTime(time_t timeT, FILETIME* lpLocalFileTime) {
-
-  if (lpLocalFileTime == NULL)
-  return false;
-
-  ULARGE_INTEGER result;
-  result.QuadPart = (unsigned long long) timeT * 10000000;
-  result.QuadPart += WIN32_TIME_OFFSET;
-
-  lpLocalFileTime->dwLowDateTime  = result.u.LowPart;
-  lpLocalFileTime->dwHighDateTime = result.u.HighPart;
-
-  return 1;
+  {
+    memset(&info, 0, sizeof(struct sysinfo));
+    info.mem_unit = 4096;
+    while (fscanf(procMeminfoFP, "%31s %u%*[^\n]\n", name, &val) != EOF)
+    {
+      if (strncmp("MemTotal:", name, 9) == 0)
+        info.totalram = val/4;
+      else if (strncmp("MemFree:", name, 8) == 0)
+        info.freeram = val/4;
+      else if (strncmp("Buffers:", name, 8) == 0)
+        info.bufferram += val/4;
+      else if (strncmp("Cached:", name, 7) == 0)
+        info.bufferram += val/4;
+      else if (strncmp("SwapTotal:", name, 10) == 0)
+        info.totalswap = val/4;
+      else if (strncmp("SwapFree:", name, 9) == 0)
+        info.freeswap = val/4;
+      else if (strncmp("HighTotal:", name, 10) == 0)
+        info.totalhigh = val/4;
+      else if (strncmp("HighFree:", name, 9) == 0)
+        info.freehigh = val/4;
+    }
+    rewind(procMeminfoFP);
+    fflush(procMeminfoFP);
+  }
+  lpBuffer->dwLength        = sizeof(MEMORYSTATUSEX);
+  lpBuffer->ullAvailPageFile = (info.freeswap * info.mem_unit);
+  lpBuffer->ullAvailPhys     = ((info.freeram + info.bufferram) * info.mem_unit);
+  lpBuffer->ullAvailVirtual  = ((info.freeram + info.bufferram) * info.mem_unit);
+  lpBuffer->ullTotalPhys     = (info.totalram * info.mem_unit);
+  lpBuffer->ullTotalVirtual  = (info.totalram * info.mem_unit);
+#endif
 }

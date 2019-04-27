@@ -46,7 +46,7 @@ using namespace KODI::MESSAGING;
 #import "IOSEAGLView.h"
 
 #import "XBMCController.h"
-#import "IOSScreenManager.h"
+#import "IOS-commonScreenManager.h"
 #import "XBMCApplication.h"
 #import "XBMCDebugHelpers.h"
 #import "platform/darwin/AutoPool.h"
