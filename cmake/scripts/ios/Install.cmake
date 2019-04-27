@@ -101,12 +101,12 @@ add_custom_command(TARGET ${APP_NAME_LC} POST_BUILD
 )
 
 set(DEPENDS_ROOT_FOR_XCODE ${NATIVEPREFIX}/..)
-configure_file(${CMAKE_SOURCE_DIR}/tools/darwin/packaging/ios/mkdeb-ios.sh.in
-               ${CMAKE_BINARY_DIR}/tools/darwin/packaging/ios/mkdeb-ios.sh @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/tools/darwin/packaging/migrate_to_kodi_ios.sh.in
-               ${CMAKE_BINARY_DIR}/tools/darwin/packaging/migrate_to_kodi_ios.sh @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/tools/darwin/packaging/ios/mkdeb.sh.in
+               ${CMAKE_BINARY_DIR}/tools/darwin/packaging/ios/mkdeb.sh @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/tools/darwin/packaging/ios/migrate_to_kodi.sh.in
+               ${CMAKE_BINARY_DIR}/tools/darwin/packaging/ios/migrate_to_kodi.sh @ONLY)
 
 add_custom_target(deb
-    COMMAND sh ./mkdeb-ios.sh ${CORE_BUILD_CONFIG}
+    COMMAND sh ./mkdeb.sh ${CORE_BUILD_CONFIG}
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tools/darwin/packaging/ios)
 add_dependencies(deb ${APP_NAME_LC})
