@@ -117,15 +117,10 @@ public:
   /*! \brief Split a comma separated parameter list into separate parameters.
    Takes care of the case where we may have a quoted string containing commas, or we may
    have a function (i.e. parentheses) with multiple parameters as a single parameter.
-
    eg:
-
     foo, bar(param1, param2), foo
-
    will return:
-
     "foo", "bar(param1, param2)", and "foo".
-
    \param paramString the string to break up
    \param parameters the returned parameters
    */
@@ -147,16 +142,12 @@ public:
   static double AlbumRelevance(const std::string& strAlbumTemp1, const std::string& strAlbum1, const std::string& strArtistTemp1, const std::string& strArtist1);
   static bool MakeShortenPath(std::string StrInput, std::string& StrOutput, size_t iTextMaxLength);
   /*! \brief Checks wether the supplied path supports Write file operations (e.g. Rename, Delete, ...)
-
    \param strPath the path to be checked
-
    \return true if Write file operations are supported, false otherwise
    */
   static bool SupportsWriteFileOperations(const std::string& strPath);
   /*! \brief Checks wether the supplied path supports Read file operations (e.g. Copy, ...)
-
    \param strPath the path to be checked
-
    \return true if Read file operations are supported, false otherwise
    */
   static bool SupportsReadFileOperations(const std::string& strPath);
@@ -171,7 +162,7 @@ public:
   // return -1 on error, valid range is 1-3999
   static int TranslateRomanNumeral(const char* roman_numeral);
 
-#ifdef TARGET_POSIX
+#if defined(TARGET_POSIX) && !defined(TARGET_DARWIN_TVOS)
   //
   // Forks to execute a shell command.
   //
@@ -247,5 +238,3 @@ private:
                                              std::vector<std::string>& associatedFiles);
 
 };
-
-
