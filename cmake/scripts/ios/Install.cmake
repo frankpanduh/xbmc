@@ -59,10 +59,10 @@
 
 
 # Options for code signing propagated as env vars to Codesign.command via Xcode
-set(CODE_SIGN_IDENTITY "" CACHE STRING "Code Sign Identity")
-if(CODE_SIGN_IDENTITY)
+set(TVOS_CODE_SIGN_IDENTITY "" CACHE STRING "Code Sign Identity")
+if(TVOS_CODE_SIGN_IDENTITY)
   set_target_properties(${APP_NAME_LC} PROPERTIES XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED TRUE
-                                                  XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ${CODE_SIGN_IDENTITY})
+                                                  XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ${TVOS_CODE_SIGN_IDENTITY})
 endif()
 
 add_custom_command(TARGET ${APP_NAME_LC} POST_BUILD
