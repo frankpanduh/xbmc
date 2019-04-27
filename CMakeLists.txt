@@ -299,10 +299,15 @@ set_target_properties(lib${APP_NAME_LC} PROPERTIES PREFIX "")
 set(OTHER_FILES cmake/README.md)
 
 # Subdirs
-core_add_subdirs_from_filelist(${CMAKE_SOURCE_DIR}/cmake/treedata/common/*.txt
-                               ${CMAKE_SOURCE_DIR}/cmake/treedata/${CORE_SYSTEM_NAME}/*.txt)
-core_add_optional_subdirs_from_filelist(${CMAKE_SOURCE_DIR}/cmake/treedata/optional/common/*.txt
-                                        ${CMAKE_SOURCE_DIR}/cmake/treedata/optional/${CORE_SYSTEM_NAME}/*.txt)
+core_add_subdirs_from_filelist(${CMAKE_SOURCE_DIR}/cmake/treedata/common/*.txt)
+core_add_optional_subdirs_from_filelist(${CMAKE_SOURCE_DIR}/cmake/treedata/optional/common/*.txt)
+if(NOT CORE_PLATFORM_NAME STREQUAL "")
+  core_add_subdirs_from_filelist(${CMAKE_SOURCE_DIR}/cmake/treedata/${CORE_PLATFORM_NAME}/*.txt)
+  core_add_optional_subdirs_from_filelist(${CMAKE_SOURCE_DIR}/cmake/treedata/optional/${CORE_PLATFORM_NAME}/*.txt)
+else()
+  core_add_subdirs_from_filelist(${CMAKE_SOURCE_DIR}/cmake/treedata/${CORE_SYSTEM_NAME}/*.txt)
+  core_add_optional_subdirs_from_filelist(${CMAKE_SOURCE_DIR}/cmake/treedata/optional/${CORE_SYSTEM_NAME}/*.txt)
+endif()
 
 target_link_libraries(lib${APP_NAME_LC} PUBLIC ${core_DEPENDS} ${SYSTEM_LDFLAGS} ${DEPLIBS} ${CMAKE_DL_LIBS})
 set_target_properties(lib${APP_NAME_LC} PROPERTIES PROJECT_LABEL "xbmc")
@@ -341,7 +346,7 @@ elseif(CORE_SYSTEM_NAME STREQUAL android)
   # Nothing
 elseif(CORE_SYSTEM_NAME STREQUAL ios)
   set_target_properties(${APP_NAME_LC} PROPERTIES OUTPUT_NAME ${APP_NAME}
-                                                  MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/xbmc/platform/darwin/ios/Info.plist.in)
+                                                  MACOSX_BUNDLE_INFO_PLIST ${PLATFORM_BUNDLE_INFO_PLIST})
 else()
   set_target_properties(${APP_NAME_LC} PROPERTIES SUFFIX ${APP_BINARY_SUFFIX})
 endif()
@@ -411,6 +416,8 @@ endif()
 # Platform specific additional extra targets
 if(EXISTS ${CMAKE_SOURCE_DIR}/cmake/scripts/${CORE_SYSTEM_NAME}/ExtraTargets.cmake)
   include(${CMAKE_SOURCE_DIR}/cmake/scripts/${CORE_SYSTEM_NAME}/ExtraTargets.cmake)
+elseif(EXISTS ${CMAKE_SOURCE_DIR}/cmake/scripts/${CORE_PLATFORM_NAME}/ExtraTargets.cmake)
+  include(${CMAKE_SOURCE_DIR}/cmake/scripts/${CORE_PLATFORM_NAME}/ExtraTargets.cmake)
 endif()
 
 include(cmake/scripts/${CORE_SYSTEM_NAME}/Install.cmake)
