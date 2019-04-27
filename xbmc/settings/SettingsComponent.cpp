@@ -16,7 +16,7 @@
 #include "Util.h"
 #include "filesystem/Directory.h"
 #include "filesystem/SpecialProtocol.h"
-#ifdef TARGET_DARWIN_IOS
+#ifdef TARGET_DARWIN_EMBEDDED
 #include "platform/darwin/DarwinUtils.h"
 #endif
 #ifdef TARGET_WINDOWS
@@ -142,7 +142,6 @@ bool CSettingsComponent::InitDirectoriesLinux(bool bPlatformDirectories)
 {
   /*
    The following is the directory mapping for Platform Specific Mode:
-
    special://xbmc/          => [read-only] system directory (/usr/share/kodi)
    special://home/          => [read-write] user's directory that will override special://kodi/ system-wide
    installations like skins, screensavers, etc.
@@ -153,7 +152,6 @@ bool CSettingsComponent::InitDirectoriesLinux(bool bPlatformDirectories)
    special://profile/       => [read-write] current profile's userdata directory.
    Generally special://masterprofile for the master profile or
    special://masterprofile/profiles/<profile_name> for other profiles.
-
    NOTE: All these root directories are lowercase. Some of the sub-directories
    might be mixed case.
    */
@@ -286,7 +284,7 @@ bool CSettingsComponent::InitDirectoriesOSX(bool bPlatformDirectories)
   std::string appPath = CUtil::GetHomePath();
   setenv("KODI_HOME", appPath.c_str(), 0);
 
-#if defined(TARGET_DARWIN_IOS)
+#if defined(TARGET_DARWIN_EMBEDDED)
   std::string fontconfigPath;
   fontconfigPath = appPath + "/system/players/VideoPlayer/etc/fonts/fonts.conf";
   setenv("FONTCONFIG_FILE", fontconfigPath.c_str(), 0);
@@ -303,7 +301,7 @@ bool CSettingsComponent::InitDirectoriesOSX(bool bPlatformDirectories)
     CSpecialProtocol::SetXBMCBinPath(appPath);
     CSpecialProtocol::SetXBMCAltBinAddonPath(binaddonAltDir);
     CSpecialProtocol::SetXBMCPath(appPath);
-#if defined(TARGET_DARWIN_IOS)
+#if defined(TARGET_DARWIN_EMBEDDED)
     std::string appName = CCompileInfo::GetAppName();
     CSpecialProtocol::SetHomePath(userHome + "/" + CDarwinUtils::GetAppRootFolder() + "/" + appName);
     CSpecialProtocol::SetMasterProfilePath(userHome + "/" + CDarwinUtils::GetAppRootFolder() + "/" + appName + "/userdata");
@@ -316,7 +314,7 @@ bool CSettingsComponent::InitDirectoriesOSX(bool bPlatformDirectories)
     std::string dotLowerAppName = "." + appName;
     StringUtils::ToLower(dotLowerAppName);
     // location for temp files
-#if defined(TARGET_DARWIN_IOS)
+#if defined(TARGET_DARWIN_EMBEDDED)
     std::string strTempPath = URIUtils::AddFileToFolder(userHome,  std::string(CDarwinUtils::GetAppRootFolder()) + "/" + appName + "/temp");
 #else
     std::string strTempPath = URIUtils::AddFileToFolder(userHome, dotLowerAppName + "/");
@@ -326,7 +324,7 @@ bool CSettingsComponent::InitDirectoriesOSX(bool bPlatformDirectories)
     CSpecialProtocol::SetTempPath(strTempPath);
 
     // xbmc.log file location
-#if defined(TARGET_DARWIN_IOS)
+#if defined(TARGET_DARWIN_EMBEDDED)
     strTempPath = userHome + "/" + std::string(CDarwinUtils::GetAppRootFolder());
 #else
     strTempPath = userHome + "/Library/Logs";

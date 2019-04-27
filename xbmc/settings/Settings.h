@@ -331,6 +331,9 @@ public:
   static const std::string SETTING_INPUT_APPLEREMOTEMODE;
   static const std::string SETTING_INPUT_APPLEREMOTEALWAYSON;
   static const std::string SETTING_INPUT_APPLEREMOTESEQUENCETIME;
+  static const std::string SETTING_INPUT_APPLESIRI;
+  static const std::string SETTING_INPUT_APPLESIRITIMEOUT;
+  static const std::string SETTING_INPUT_APPLESIRITIMEOUTENABLED;
   static const std::string SETTING_NETWORK_USEHTTPPROXY;
   static const std::string SETTING_NETWORK_HTTPPROXYTYPE;
   static const std::string SETTING_NETWORK_HTTPPROXYSERVER;
@@ -381,7 +384,6 @@ public:
 
   /*!
    \brief Creates a new settings wrapper around a new settings manager.
-
    For access to the "global" settings wrapper the static GetInstance() method should
    be used.
    */
@@ -399,21 +401,18 @@ public:
 
   /*!
    \brief Loads setting values from the given (XML) file.
-
    \param file Path to an XML file containing setting values
    \return True if the setting values were successfully loaded, false otherwise
    */
   bool Load(const std::string &file);
   /*!
   \brief Loads setting values from the given XML element.
-
   \param root XML element containing setting values
   \return True if the setting values were successfully loaded, false otherwise
   */
   bool Load(const TiXmlElement *root) { bool updated; return CSettingsBase::LoadValuesFromXml(root, updated); }
   /*!
    \brief Loads setting values from the given XML element.
-
    \param root XML element containing setting values
    \param hide Whether to hide the loaded settings or not
    \return True if the setting values were successfully loaded, false otherwise
@@ -422,7 +421,6 @@ public:
 
   /*!
    \brief Saves the setting values to the given (XML) file.
-
    \param file Path to an XML file
    \return True if the setting values were successfully saved, false otherwise
    */
@@ -431,7 +429,6 @@ public:
   /*!
    \brief Loads the setting being represented by the given XML node with the
    given identifier.
-
    \param node XML node representing the setting to load
    \param settingId Setting identifier
    \return True if the setting was successfully loaded from the given XML node, false otherwise
