@@ -2,19 +2,20 @@ if(NOT CMAKE_TOOLCHAIN_FILE)
   message(FATAL_ERROR "CMAKE_TOOLCHAIN_FILE required for ios/tvos. See ${CMAKE_SOURCE_DIR}/cmake/README.md")
 endif()
 
+set(ARCH_DEFINES -D_LINUX -DTARGET_POSIX -DTARGET_DARWIN -DTARGET_DARWIN_EMBEDDED)
+set(PLATFORM_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/xbmc/platform/darwin/${CORE_PLATFORM_NAME_LC}/Info.plist.in")
 
+# Todo: change tvos source from Main* to XBMC*, remove usage of xbmc/platform/darwin/ios from tvos code 
+#		and move common code to a common folder
 if(CORE_PLATFORM_NAME_LC STREQUAL tvos)
-  set(CORE_MAIN_SOURCE ${CMAKE_SOURCE_DIR}/xbmc/platform/darwin/tvos/MainApplication.mm)
-  set(ARCH_DEFINES -DTARGET_DARWIN_TVOS)
-  set(PLATFORM_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/xbmc/platform/darwin/tvos/Info.plist.in)
+  set(CORE_MAIN_SOURCE ${CMAKE_SOURCE_DIR}/xbmc/platform/darwin/${CORE_PLATFORM_NAME_LC}/MainApplication.mm)
+  list(APPEND ARCH_DEFINES -DTARGET_DARWIN_TVOS)
 else()
-  set(CORE_MAIN_SOURCE ${CMAKE_SOURCE_DIR}/xbmc/platform/darwin/ios/XBMCApplication.mm)
-  set(ARCH_DEFINES -DTARGET_DARWIN_IOS)
-  set(PLATFORM_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/xbmc/platform/darwin/ios/Info.plist.in)
+  set(CORE_MAIN_SOURCE ${CMAKE_SOURCE_DIR}/xbmc/platform/darwin/${CORE_PLATFORM_NAME_LC}/XBMCApplication.mm)
+  list(APPEND ARCH_DEFINES -DTARGET_DARWIN_IOS)
 endif()
-list(APPEND ARCH_DEFINES -D_LINUX -DTARGET_POSIX -DTARGET_DARWIN -DTARGET_DARWIN_EMBEDDED)
 set(SYSTEM_DEFINES -D_REENTRANT -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE
-                   -D__STDC_CONSTANT_MACROS)
+                   -D__STDC_CONSTANT_MACROS -DHAS_LINUX_NETWORK -DHAS_ZEROCONF)
 set(PLATFORM_DIR platform/linux)
 set(CMAKE_SYSTEM_NAME Darwin)
 if(WITH_ARCH)
@@ -33,9 +34,6 @@ else()
   endif()
 endif()
 
-# Additional SYSTEM_DEFINES
-list(APPEND SYSTEM_DEFINES -DHAS_LINUX_NETWORK -DHAS_ZEROCONF)
-
 list(APPEND CMAKE_SYSTEM_PREFIX_PATH ${NATIVEPREFIX})
 
 list(APPEND DEPLIBS "-framework CoreFoundation" "-framework CoreVideo"
@@ -48,11 +46,11 @@ list(APPEND DEPLIBS "-framework CoreFoundation" "-framework CoreVideo"
 
 set(ENABLE_OPTICAL OFF CACHE BOOL "" FORCE)
 
-set(CMAKE_XCODE_ATTRIBUTE_TVOS_DEPLOYMENT_TARGET "11.0")
-set(CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "9.0")
 if(CORE_PLATFORM_NAME_LC STREQUAL tvos)
+  set(CMAKE_XCODE_ATTRIBUTE_TVOS_DEPLOYMENT_TARGET "11.0")
   set(CMAKE_XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "3")
 else()
+  set(CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "9.0")
   set(CMAKE_XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2")
 endif()
 

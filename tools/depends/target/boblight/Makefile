@@ -30,7 +30,7 @@ $(PLATFORM): $(TARBALLS_LOCATION)/$(ARCHIVE) $(DEPS)
 	cd $(PLATFORM); patch -p0 < ../02-fixandroid.patch
 	cd $(PLATFORM); autoreconf -vif
 	cd $(PLATFORM); $(CONFIGURE)
-ifeq ($(CPU),arm64)
+ifeq ($(TARGET_PLATFORM),appletvos))
 	cd $(PLATFORM); patch -p0 < ../03-fixtvos.patch
 	cd $(PLATFORM); sed -ie "s|-bind_at_load||" ./libtool
 	cd $(PLATFORM); sed -ie "s|-bind_at_load||" ./ltmain.sh
@@ -40,7 +40,7 @@ $(LIBDYLIB): $(PLATFORM)
 	$(MAKE) -C $(PLATFORM)
 
 .installed-$(PLATFORM): $(LIBDYLIB)
-ifeq ($(OS),ios)
+ifeq ($(OS),darwin_embedded)
 ifeq ($(TARGET_PLATFORM),appletvos)
 	#deploy into source tree for tvos - we distribute libboblight with the bundle...
 	cp $(PLATFORM)/src/.libs/libboblight.0.dylib $(CMAKE_SOURCE_DIR)/system/libboblight-tvos.0.dylib

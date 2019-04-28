@@ -263,6 +263,7 @@ set_target_properties(gtest PROPERTIES FOLDER "External Projects")
 copy_files_from_filelist_to_buildtree(${CMAKE_SOURCE_DIR}/cmake/installdata/common/*.txt
                                       ${CMAKE_SOURCE_DIR}/cmake/installdata/${CORE_SYSTEM_NAME}/*.txt)
 
+
 list(APPEND SKINS "${CMAKE_SOURCE_DIR}/addons/skin.estuary\;${CMAKE_SOURCE_DIR}")
 list(APPEND SKINS "${CMAKE_SOURCE_DIR}/addons/skin.estouchy\;${CMAKE_SOURCE_DIR}")
 
@@ -299,15 +300,17 @@ set_target_properties(lib${APP_NAME_LC} PROPERTIES PREFIX "")
 set(OTHER_FILES cmake/README.md)
 
 # Subdirs
-if(CORE_PLATFORM_NAME STREQUAL "tvos")
-  set(TEMP_CORE_SYSTEM_NAME ${CORE_PLATFORM_NAME})
-else()
-  set(TEMP_CORE_SYSTEM_NAME ${CORE_SYSTEM_NAME})
-endif()
+if(NOT CORE_PLATFORM_NAME STREQUAL "")
 core_add_subdirs_from_filelist(${CMAKE_SOURCE_DIR}/cmake/treedata/common/*.txt
-                               ${CMAKE_SOURCE_DIR}/cmake/treedata/${TEMP_CORE_SYSTEM_NAME}/*.txt)
+                               ${CMAKE_SOURCE_DIR}/cmake/treedata/${CORE_PLATFORM_NAME}/*.txt)
 core_add_optional_subdirs_from_filelist(${CMAKE_SOURCE_DIR}/cmake/treedata/optional/common/*.txt
-                                        ${CMAKE_SOURCE_DIR}/cmake/treedata/optional/${TEMP_CORE_SYSTEM_NAME}/*.txt)
+                                        ${CMAKE_SOURCE_DIR}/cmake/treedata/optional/${CORE_PLATFORM_NAME}/*.txt)
+else()
+core_add_subdirs_from_filelist(${CMAKE_SOURCE_DIR}/cmake/treedata/common/*.txt
+                               ${CMAKE_SOURCE_DIR}/cmake/treedata/${CORE_SYSTEM_NAME}/*.txt)
+core_add_optional_subdirs_from_filelist(${CMAKE_SOURCE_DIR}/cmake/treedata/optional/common/*.txt
+                                        ${CMAKE_SOURCE_DIR}/cmake/treedata/optional/${CORE_SYSTEM_NAME}/*.txt)
+endif()
 
 target_link_libraries(lib${APP_NAME_LC} PUBLIC ${core_DEPENDS} ${SYSTEM_LDFLAGS} ${DEPLIBS} ${CMAKE_DL_LIBS})
 set_target_properties(lib${APP_NAME_LC} PROPERTIES PROJECT_LABEL "xbmc")
@@ -344,7 +347,7 @@ if(WIN32)
   endif()
 elseif(CORE_SYSTEM_NAME STREQUAL android)
   # Nothing
-elseif(CORE_SYSTEM_NAME STREQUAL ios)
+elseif(CORE_SYSTEM_NAME STREQUAL darwin_embedded)
   set_target_properties(${APP_NAME_LC} PROPERTIES OUTPUT_NAME ${APP_NAME}
                                                   MACOSX_BUNDLE_INFO_PLIST ${PLATFORM_BUNDLE_INFO_PLIST})
 else()
