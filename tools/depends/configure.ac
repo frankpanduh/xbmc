@@ -330,6 +330,7 @@ case $host in
           platform_cflags+=" -fembed-bitcode"
           platform_cxxflags+=" -fembed-bitcode"
           platform_min_version="$target_platform-version-min=11.0"
+          platform_ldflags+=" -L$use_sdk_path"
         else
           # setup which cpu to use
           if test "x$use_cpu" = "xauto"; then
@@ -338,6 +339,7 @@ case $host in
 
           target_platform=iphoneos
           platform_min_version="$target_platform-version-min=9.0"
+          platform_ldflags+=" -L$use_sdk_path/usr/lib/system"
         fi
 
         found_sdk_version=[`$use_xcodebuild -showsdks | grep $target_platform | sort | tail -n 1 | awk '{ print $2}'`]
@@ -375,7 +377,6 @@ case $host in
         platform_cflags+=" -Wno-error=implicit-function-declaration"
         optimize_flags="-O3"
         use_sdk_path=[`$use_xcodebuild -version -sdk $sdk_name | grep ^Path | awk '{ print $2}'`]
-        platform_ldflags+=" -L$use_sdk_path/usr/lib/system"
         platform_cxxflags+=" $cpu_flags"
       ;;
     esac
