@@ -510,7 +510,7 @@ void CGUITextureManager::FreeUnusedTextures(unsigned int timeDelay)
 #if defined(TARGET_DARWIN_IOS)
     CWinSystemIOS* winSystem = dynamic_cast<CWinSystemIOS*>(CServiceBroker::GetWinSystem());
     if (!winSystem->IsBackgrounded() || glIsTexture(m_unusedHwTextures[i]))
-#elif
+#elif defined(TARGET_DARWIN_TVOS)
     CWinSystemTVOS* winSystem = dynamic_cast<CWinSystemTVOS*>(CServiceBroker::GetWinSystem());
     if (!winSystem->IsBackgrounded() || glIsTexture(m_unusedHwTextures[i]))
 #endif

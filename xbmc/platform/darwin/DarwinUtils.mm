@@ -243,7 +243,7 @@ bool CDarwinUtils::DeviceHasRetina(double &scale)
 {
   static enum iosPlatform platform = iDeviceUnknown;
 
-#if defined(TARGET_DARWIN_IOS)
+#if defined(TARGET_DARWIN_EMBEDDED)
   if( platform == iDeviceUnknown )
   {
     platform = getIosPlatform();
@@ -493,6 +493,10 @@ int CDarwinUtils::BatteryLevel(void)
   }
   CFRelease(powerSources);
   CFRelease(powerSourceInfo);
+#endif
+
+#if defined(TARGET_DARWIN_TVOS)
+  return 100;
 #endif
   return batteryLevel * 100;
 }

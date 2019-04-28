@@ -1067,6 +1067,8 @@ bool CAddonMgr::PlatformSupportsAddon(const cp_plugin_info_t *plugin)
     "windowsstore",
 #elif defined(TARGET_DARWIN_IOS)
     "ios",
+#elif defined(TARGET_DARWIN_TVOS)
+    "tvos",
 #if defined(__ARM_ARCH_7A__)
     "ios-armv7",
 #elif defined(__aarch64__)
