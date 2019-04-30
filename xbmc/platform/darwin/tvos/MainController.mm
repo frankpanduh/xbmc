@@ -26,7 +26,7 @@
 #import "messaging/ApplicationMessenger.h"
 #import "platform/darwin/AutoPool.h"
 #import "platform/darwin/NSLogDebugHelpers.h"
-#import "platform/darwin/tvos/MainEAGLView.h"
+#import "platform/darwin/tvos/TVOSEAGLView.h"
 #import "platform/darwin/tvos/MainController.h"
 #import "platform/darwin/tvos/MainApplication.h"
 #import "platform/darwin/tvos/TVOSTopShelf.h"
@@ -1202,7 +1202,7 @@ MainController* g_xbmcController;
   self.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
   self.view.autoresizesSubviews = YES;
 
-  m_glView = [[MainEAGLView alloc] initWithFrame:self.view.bounds withScreen:[UIScreen mainScreen]];
+  m_glView = [[TVOSEAGLView alloc] initWithFrame:self.view.bounds withScreen:[UIScreen mainScreen]];
 
   // Check if screen is Retina
   m_screenScale = [m_glView getScreenScale:[UIScreen mainScreen]];

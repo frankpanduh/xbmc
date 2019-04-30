@@ -15,7 +15,7 @@
 #import "platform/darwin/AutoPool.h"
 #import "platform/darwin/DarwinUtils.h"
 #import "platform/darwin/NSLogDebugHelpers.h"
-#import "platform/darwin/tvos/MainEAGLView.h"
+#import "platform/darwin/tvos/TVOSEAGLView.h"
 #import "platform/darwin/tvos/MainController.h"
 
 #import <signal.h>
@@ -24,7 +24,7 @@
 using namespace KODI::MESSAGING;
 
 //--------------------------------------------------------------
-@implementation MainEAGLView
+@implementation TVOSEAGLView
 @synthesize m_context;
 @synthesize m_currentScreen;
 

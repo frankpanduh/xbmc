@@ -2,7 +2,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tvosShared.m.in ${CMAKE_CURRENT_SOURC
 
 set(SOURCES
 			MainController.mm
-			MainEAGLView.mm
+			TVOSEAGLView.mm
 			TVOSSettingsHandler.mm
 			TVOSTopShelf.mm
 			${CMAKE_CURRENT_SOURCE_DIR}/tvosShared.m)
@@ -10,7 +10,7 @@ set(SOURCES
 set(HEADERS
 			MainApplication.h
 			MainController.h
-			MainEAGLView.h
+			TVOSEAGLView.h
 			TVOSSettingsHandler.h
 			TVOSTopShelf.h
 			tvosShared.h)

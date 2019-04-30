@@ -26,13 +26,13 @@ typedef NS_ENUM(NSUInteger, UIPanGestureRecognizerDirection)
   UIPanGestureRecognizerDirectionRight
 };
 
-@class MainEAGLView;
+@class TVOSEAGLView;
 
 @interface MainController : UIViewController <UIGestureRecognizerDelegate>
 {
 @private
   UIWindow* m_window;
-  MainEAGLView* m_glView;
+  TVOSEAGLView* m_glView;
   // Touch handling
   CGSize m_screensize;
   CGPoint m_lastGesturePoint;
