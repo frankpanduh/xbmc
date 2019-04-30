@@ -1,31 +1,35 @@
 /*
- *  Copyright (C) 2010-2018 Team Kodi
+ *  Copyright (C) 2012-2018 Team Kodi
  *  This file is part of Kodi - https://kodi.tv
  *
  *  SPDX-License-Identifier: GPL-2.0-or-later
  *  See LICENSES/README.md for more information.
  */
 
-#include "platform/darwin/tvos/MainKeyboard.h"
-
 #import <UIKit/UIKit.h>
+#include "platform/darwin/ios-common/IOSKeyboard.h"
 
 @interface KeyboardView : UIView <UITextFieldDelegate>
 {
   NSMutableString* _text;
   BOOL _confirmed;
-  CMainKeyboard* _tvosKeyboard;
+  CIOSKeyboard *_iosKeyboard;
   bool* _canceled;
   BOOL _deactivated;
   UITextField* _textField;
   UITextField* _heading;
+#ifdef (TARGET_DARWIN_IOS)
+  int _keyboardIsShowing; // 0: not, 1: will show, 2: showing
+#endif
   CGRect _kbRect;
+#ifdef (TARGET_DARWIN_TVOS)
   CGRect _frame;
+#endif
 }
 
 @property (nonatomic, retain) NSMutableString* _text;
 @property (getter = isConfirmed) BOOL _confirmed;
-@property (assign, setter = registerKeyboard:) CMainKeyboard* _tvosKeyboard;
+@property (assign, setter = registerKeyboard:) CIOSKeyboard* _iosKeyboard;
 @property CGRect _frame;
 
 - (void) setHeading:(NSString*)heading;
@@ -37,5 +41,4 @@
 - (void) setCancelFlag:(bool*)cancelFlag;
 - (void) doDeactivate:(NSDictionary*)dict;
 - (id)initWithFrameInternal;
-
 @end

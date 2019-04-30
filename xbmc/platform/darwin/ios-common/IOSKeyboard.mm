@@ -6,11 +6,17 @@
  *  See LICENSES/README.md for more information.
  */
 
+#ifdef (TARGET_DARWIN_IOS)
 #include "XBMCController.h"
-#include "IOSKeyboard.h"
-#include "IOSKeyboardView.h"
 #include "XBMCDebugHelpers.h"
+#endif
+#ifdef (TARGET_DARWIN_TVOS)
+#import "platform/darwin/NSLogDebugHelpers.h"
+#endif
 #include "platform/darwin/DarwinUtils.h"
+#include "platform/darwin/ios-common/IOSKeyboard.h"
+#include "platform/darwin/ios-common/IOSKeyboardView.h"
+
 
 #import "platform/darwin/AutoPool.h"
 
@@ -18,8 +24,7 @@ KeyboardView *g_pIosKeyboard = nil;
 
 bool CIOSKeyboard::ShowAndGetInput(char_callback_t pCallback, const std::string &initialString, std::string &typedString, const std::string &heading, bool bHiddenInput)
 {
-  // we are in xbmc main thread or python module thread.
-
+  // we are in the MCRuntimeLib thread so we need a pool
   CCocoaAutoPool pool;
 
   @synchronized([KeyboardView class])
@@ -29,8 +34,8 @@ bool CIOSKeyboard::ShowAndGetInput(char_callback_t pCallback, const std::string 
       return false;
 
     // assume we are only drawn on the mainscreen ever!
-    UIScreen *pCurrentScreen = [UIScreen mainScreen];
-    CGRect keyboardFrame = CGRectMake(0, 0, pCurrentScreen.bounds.size.width, pCurrentScreen.bounds.size.height);
+    UIScreen* pCurrentScreen = [UIScreen mainScreen];
+    CGRect keyboardFrame = CGRectMake(0, 0, pCurrentScreen.bounds.size.height, pCurrentScreen.bounds.size.width);
 //    LOG(@"kb: kb frame: %@", NSStringFromCGRect(keyboardFrame));
 
     //create the keyboardview
@@ -38,9 +43,11 @@ bool CIOSKeyboard::ShowAndGetInput(char_callback_t pCallback, const std::string 
     if (!g_pIosKeyboard)
       return false;
 
+#ifdef (TARGET_DARWIN_IOS)
     // inform the controller that the native keyboard is active
     // basically as long as g_pIosKeyboard exists...
     [g_xbmcController nativeKeyboardActive:true];
+#endif
   }
 
   m_pCharCallback = pCallback;
@@ -58,13 +65,16 @@ bool CIOSKeyboard::ShowAndGetInput(char_callback_t pCallback, const std::string 
     // user is done - get resulted text and confirmation
     confirmed = g_pIosKeyboard.isConfirmed;
     if (confirmed)
-      typedString = [g_pIosKeyboard.text UTF8String];
+      typedString = [g_pIosKeyboard._text UTF8String];
   }
   [g_pIosKeyboard release]; // bye bye native keyboard
   @synchronized([KeyboardView class])
   {
     g_pIosKeyboard = nil;
+
+#ifdef (TARGET_DARWIN_IOS)
     [g_xbmcController nativeKeyboardActive:false];
+#endif
   }
   return confirmed;
 }
