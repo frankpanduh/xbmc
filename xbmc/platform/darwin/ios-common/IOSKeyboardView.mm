@@ -12,15 +12,14 @@
 
 #import "platform/darwin/ios-common/IOSKeyboardView.h"
 #include "platform/darwin/ios-common/IOSKeyboard.h"
+#import "platform/darwin/NSLogDebugHelpers.h"
 
 #if defined (TARGET_DARWIN_IOS)
 #import "platform/darwin/ios/IOSScreenManager.h"
 #import "platform/darwin/ios/XBMCController.h"
-#import "platform/darwin/ios/XBMCDebugHelpers.h"
 #elif defined (TARGET_DARWIN_TVOS)
 #import "platform/darwin/DarwinUtils.h"
 #import "platform/darwin/tvos/MainController.h"
-#import "platform/darwin/NSLogDebugHelpers.h"
 #endif
 
 static CEvent keyboardFinishedEvent;

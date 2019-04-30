@@ -8,11 +8,8 @@
 
 #ifdef (TARGET_DARWIN_IOS)
 #include "XBMCController.h"
-#include "XBMCDebugHelpers.h"
 #endif
-#ifdef (TARGET_DARWIN_TVOS)
 #import "platform/darwin/NSLogDebugHelpers.h"
-#endif
 #include "platform/darwin/DarwinUtils.h"
 #include "platform/darwin/ios-common/IOSKeyboard.h"
 #include "platform/darwin/ios-common/IOSKeyboardView.h"
