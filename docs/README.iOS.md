@@ -143,51 +143,71 @@ make -j$(getconf _NPROCESSORS_ONLN) -C tools/depends/target/binary-addons ADDONS
 Before you can use Xcode to build Kodi, the Xcode project has to be generated with CMake. CMake is built as part of the dependencies and doesn't have to be installed separately. A toolchain file is also generated and is used to configure CMake.
 
 ### 6.1. Build with Xcode
-Create an out-of-source build directory:
+
+Change to Kodi's source code directory:
 ```
-mkdir $HOME/kodi-build
+cd $HOME/kodi
 ```
 
-Change to build directory:
+Generate Xcode project for ARM:
 ```
-cd $HOME/kodi-build
+make -C tools/depends/target/cmakebuildsys Gen=Xcode
 ```
+
+Additional cmake arguments can be supplied via the CMAKE_EXTRA_ARGUMENTS command line variable
 
 Generate Xcode project for ARM 64bit (**recommended**):
-```
-/Users/Shared/xbmc-depends/x86_64-darwin17.5.0-native/bin/cmake -G Xcode -DCMAKE_TOOLCHAIN_FILE=/Users/Shared/xbmc-depends/iphoneos11.3_arm64-target-debug/share/Toolchain.cmake ../kodi
-```
+````
+make -C tools/depends/target/cmakebuildsys Gen=Xcode CMAKE_EXTRA_ARGUMENTS="-DCMAKE_TOOLCHAIN_FILE=/Users/Shared/xbmc-depends/iphoneos11.3_arm64-target-debug/share/Toolchain.cmake"
+````
 
 Or generate Xcode project for ARM 32bit:
-```
-/Users/Shared/xbmc-depends/x86_64-darwin15.6.0-native/bin/cmake -G Xcode -DCMAKE_TOOLCHAIN_FILE=/Users/Shared/xbmc-depends/iphoneos9.3_armv7-target/share/Toolchain.cmake ../kodi
-```
+````
+make -C tools/depends/target/cmakebuildsys Gen=Xcode CMAKE_EXTRA_ARGUMENTS="-DCMAKE_TOOLCHAIN_FILE=/Users/Shared/xbmc-depends/iphoneos9.3_armv7-target/share/Toolchain.cmake"
+````
 
-**WARNING:** The toolchain file location differs depending on your iOS and SDK version. You have to replace `x86_64-darwin15.6.0-native` and `iphoneos11.3_arm64-target-debug` or `iphoneos9.3_armv7-target` in the paths above with the correct ones on your system.
+**WARNING:** The toolchain file location differs depending on your iOS and SDK version. You have to replace `iphoneos11.3_arm64-target-debug` or `iphoneos9.3_armv7-target` in the paths above with the correct ones on your system.
 
 You can check `Users/Shared/xbmc-depends` directory content with:
 ```
 ls -l /Users/Shared/xbmc-depends
 ```
 
-**Start Xcode, open the Kodi project file** (`kodi.xcodeproj`) located in `$HOME/kodi-build` and hit `Build`.
+**Start Xcode, open the Kodi project file** (`kodi.xcodeproj`) located in `$HOME/kodi/build` and hit `Build`.
 
 **WARNING:** If you have selected a specific iOS SDK Version in step 4 then you might need to adapt the active target to use the same iOS SDK version, otherwise build will fail. Be sure to select a device configuration. Building for simulator is not supported.
 
 ### 6.2. Build with xcodebuild
-Alternatively, you can also build via Xcode from the command-line with `xcodebuild`, triggered by CMake:
+Alternatively, you can also build via Xcode from the command-line with `xcodebuild`:
+
+Change to Kodi's source code directory:
+```
+cd $HOME/kodi
+```
+
+Generate Xcode project for ARM:
+```
+make -C tools/depends/target/cmakebuildsys Gen=Xcode
+```
+
+Additional cmake arguments can be supplied via the CMAKE_EXTRA_ARGUMENTS command line variable
+
+An example to set -DPLATFORM_BUNDLE_IDENTIFIER:
+````
+make -C tools/depends/target/cmakebuildsys Gen=Xcode CMAKE_EXTRA_ARGUMENTS="-DPLATFORM_BUNDLE_IDENTIFIER=\"tv.kodi.kodi\""
+````
 
 Change to build directory:
 ```
-cd $HOME/kodi-build
+cd $HOME/kodi/build
 ```
 
 Build Kodi:
 ```
-/Users/Shared/xbmc-depends/x86_64-darwin17.5.0-native/bin/cmake --build . --config "Debug" -- -verbose -jobs $(getconf _NPROCESSORS_ONLN)
+xcodebuild -config "Debug" -jobs $(getconf _NPROCESSORS_ONLN)
 ```
 
-**TIP:** You can specify `Release` instead of `Debug` as `--config` parameter.
+**TIP:** You can specify Release instead of Debug as -config parameter.
 
 ### 6.3. Build with make
 CMake is also able to generate makefiles that can be used to build with make.
@@ -213,8 +233,8 @@ make -j$(getconf _NPROCESSORS_ONLN) -C build
 CMake generates a target called `deb` which will package Kodi ready for distribution. After Kodi has been built, the target can be triggered by selecting it in Xcode active scheme or manually running
 
 ```
-cd $HOME/kodi-build/build
-/Users/Shared/xbmc-depends/x86_64-darwin17.5.0-native/bin/cmake --build . --target "deb" --config "Debug"
+cd $HOME/kodi/build
+xcodebuild -target Deb
 ```
 
 Alternatively, if you built using makefiles issue:
