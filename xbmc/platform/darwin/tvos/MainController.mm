@@ -26,6 +26,7 @@
 #import "messaging/ApplicationMessenger.h"
 #import "platform/darwin/AutoPool.h"
 #import "platform/darwin/NSLogDebugHelpers.h"
+#import "platform/darwin/DarwinUtils.h"
 #import "platform/darwin/tvos/MainEAGLView.h"
 #import "platform/darwin/tvos/MainController.h"
 #import "platform/darwin/tvos/MainApplication.h"
@@ -1117,6 +1118,15 @@ MainController* g_xbmcController;
   // Check if screen is Retina
   m_screenScale = [m_glView getScreenScale:[UIScreen mainScreen]];
   [self.view addSubview: m_glView];
+}
+//--------------------------------------------------------------
+- (void)viewDidLoad
+{
+  [super viewDidLoad];
+
+  // safe time to update screensize, loadView is too early
+  m_screensize.width  = m_glView.bounds.size.width  * m_screenScale;
+  m_screensize.height = m_glView.bounds.size.height * m_screenScale;
 
   [self createSwipeGestureRecognizers];
   [self createPanGestureRecognizers];
@@ -1132,6 +1142,7 @@ MainController* g_xbmcController;
     }
   }
 }
+
 //--------------------------------------------------------------
 - (void)viewWillAppear:(BOOL)animated
 {
@@ -1198,10 +1209,6 @@ MainController* g_xbmcController;
 //--------------------------------------------------------------
 - (CGSize)getScreenSize
 {
-  dispatch_sync(dispatch_get_main_queue(), ^{
-    m_screensize.width  = m_glView.bounds.size.width  * m_screenScale;
-    m_screensize.height = m_glView.bounds.size.height * m_screenScale;
-  });
   return m_screensize;
 }
 
@@ -1409,83 +1416,121 @@ MainController* g_xbmcController;
     return 60.0;
   }
 
-  //--------------------------------------------------------------
-  - (void)displayLinkTick:(CADisplayLink *)sender
+//--------------------------------------------------------------
+- (void)displayLinkTick:(CADisplayLink *)sender
+{
+  if (self.displayLink.duration > 0.0f)
   {
-    if (self.displayLink.duration > 0.0)
+    static float oldDisplayRate = 0.0f;
+    if (CDarwinUtils::IsAppleTV4KOrAbove())
     {
-      static float oldDisplayRate = 0.00;
+      // The AppleTV4K has a rock solid reported duration.
       // we want fps, not duration in seconds.
-      self.displayRate = 1.0 / self.displayLink.duration;
-      if (self.displayRate != oldDisplayRate)
+      self.displayRate = 1.0f / self.displayLink.duration;
+    }
+    else
+    {
+      // AppleTV4 wanders and we have to quantize to get it.
+      // Since AppleTV4 cannot disaply rate switch, we only
+      // need to support a small set of standard display rates.
+      float displayFPS = 0.0f;
+      int duration = 1000000.0f * self.displayLink.duration;
+      switch(duration)
       {
-        // track and log changes
-        oldDisplayRate = self.displayRate;
-        //CLog::Log(LOGDEBUG, "%s: displayRate = %f", __PRETTY_FUNCTION__, self.displayRate);
+        default:
+          displayFPS = 0.0f;
+          break;
+        case 41100 ... 43200:
+          // 23.976 (41708.333333)
+          displayFPS = 24000.0f / 1001.0f;
+          break;
+        case 16000 ... 17000:
+          // 59.940 (16683.333333)
+          displayFPS = 60000.0f / 1001.0f;
+          break;
+        case 32000 ... 35000:
+          // 29.970 (33366.666656)
+          displayFPS = 30000.0f / 1001.0f;
+          break;
+        case 19000 ... 21000:
+          // 50.000 (20000.000000)
+          displayFPS = 50000.0f / 1000.0f;
+          break;
+        case 35500 ... 41000:
+          // 25.000 (40000.000000)
+          displayFPS = 25000.0f / 1000.0f;
+          break;
       }
+      self.displayRate = displayFPS;
+    }
+
+    if (self.displayRate != oldDisplayRate)
+    {
+      // track and log changes
+      oldDisplayRate = self.displayRate;
+      CLog::Log(LOGDEBUG, "%s: displayRate = %f", __PRETTY_FUNCTION__, self.displayRate);
     }
   }
+}
 
-  //--------------------------------------------------------------
-  - (void)displayRateSwitch:(float)refreshRate withDynamicRange:(int)dynamicRange
+//--------------------------------------------------------------
+- (void)displayRateSwitch:(float)refreshRate withDynamicRange:(int)dynamicRange
+{
+  if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_VIDEOPLAYER_ADJUSTREFRESHRATE) != ADJUST_REFRESHRATE_OFF)
   {
-    if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_VIDEOPLAYER_ADJUSTREFRESHRATE) != ADJUST_REFRESHRATE_OFF)
+    if (__builtin_available(tvOS 11.2, *))
     {
-      if (__builtin_available(tvOS 11.2, *))
+      // avDisplayManager is only in 11.2 beta4 so we need to also
+      // trap out for older 11.2 betas. This can be changed once
+      // tvOS 11.2 gets released.
+      if ([m_window respondsToSelector:@selector(avDisplayManager)])
       {
-        // avDisplayManager is only in 11.2 beta4 so we need to also
-        // trap out for older 11.2 betas. This can be changed once
-        // tvOS 11.2 gets released.
-        if ([m_window respondsToSelector:@selector(avDisplayManager)])
+        auto avDisplayManager = [m_window avDisplayManager];
+        if (refreshRate > 0.0)
         {
-          auto avDisplayManager = [m_window avDisplayManager];
-          if (refreshRate > 0.0)
+          // initWithRefreshRate is private in 11.2 beta4 but apple
+          // will move it public at some time.
+          // videoDynamicRange values are based on watching
+          // console log when forcing different values.
+          // search for "Native Mode Requested" and pray :)
+          // searches for "FBSDisplayConfiguration" and "currentMode" will show the actual
+          // for example, currentMode = <FBSDisplayMode: 0x1c4298100; 1920x1080@2x (3840x2160/2) 24Hz p3 HDR10>
+          // SDR == 0, 1
+          // HDR == 2, 3
+          // DoblyVision == 4
+          auto displayCriteria = [[AVDisplayCriteria alloc] initWithRefreshRate:refreshRate videoDynamicRange:dynamicRange];
+          // setting preferredDisplayCriteria will trigger a display rate switch
+          avDisplayManager.preferredDisplayCriteria = displayCriteria;
+          if (displayCriteria)
           {
-            // initWithRefreshRate is private in 11.2 beta4 but apple
-            // will move it public at some time.
-            // videoDynamicRange values are based on watching
-            // console log when forcing different values.
-            // search for "Native Mode Requested" and pray :)
-            // searches for "FBSDisplayConfiguration" and "currentMode" will show the actual
-            // for example, currentMode = <FBSDisplayMode: 0x1c4298100; 1920x1080@2x (3840x2160/2) 24Hz p3 HDR10>
-            // SDR == 0, 1
-            // HDR == 2, 3
-            // DoblyVision == 4
-#if __TVOS_11_2
-            auto displayCriteria = [[AVDisplayCriteria alloc] initWithRefreshRate:refreshRate videoDynamicRange:dynamicRange];
-#else
-          std::string neveryyoumind = "AVDisplayCriteria";
-          Class AVDisplayCriteriaClass = NSClassFromString([NSString stringWithUTF8String: neveryyoumind.c_str()]);
-          AVDisplayCriteria *displayCriteria = [[AVDisplayCriteriaClass alloc] initWithRefreshRate:refreshRate videoDynamicRange:dynamicRange];
-#endif
             // setting preferredDisplayCriteria will trigger a display rate switch
             avDisplayManager.preferredDisplayCriteria = displayCriteria;
           }
-          else
-          {
-            // switch back to tvOS defined user settings if we get
-            // zero or less than value for refreshRate. Should never happen :)
-            avDisplayManager.preferredDisplayCriteria = nil;
-          }
-          std::string dynamicRangeString = "Unknown";
-          switch(dynamicRange)
-          {
-            case 0 ... 1:
-              dynamicRangeString = "SDR";
-              break;
-            case 2 ... 3:
-              dynamicRangeString = "HDR10";
-              break;
-            case 4:
-              dynamicRangeString = "DolbyVision";
-              break;
-          }
-          CLog::Log(LOGDEBUG, "displayRateSwitch request: refreshRate = %.2f, dynamicRange = %s", refreshRate, dynamicRangeString.c_str());
-
         }
+        else
+        {
+          // switch back to tvOS defined user settings if we get
+          // zero or less than value for refreshRate. Should never happen :)
+          avDisplayManager.preferredDisplayCriteria = nil;
+        }
+        std::string dynamicRangeString = "Unknown";
+        switch(dynamicRange)
+        {
+          case 0 ... 1:
+            dynamicRangeString = "SDR";
+            break;
+          case 2 ... 3:
+            dynamicRangeString = "HDR10";
+            break;
+          case 4:
+            dynamicRangeString = "DolbyVision";
+            break;
+        }
+        CLog::Log(LOGDEBUG, "displayRateSwitch request: refreshRate = %.2f, dynamicRange = %s", refreshRate, dynamicRangeString.c_str());
       }
     }
   }
+}
 
   //--------------------------------------------------------------
   - (void)displayRateReset

@@ -24,6 +24,7 @@ public:
   static const char *GetOSVersionString(void);
   static const char *GetIOSVersionString(void);
   static const char *GetOSXVersionString(void);
+  static bool IsAppleTV4KOrAbove(void);
   static std::string GetFrameworkPath(bool forPython);
   static int         GetExecutablePath(char* path, size_t *pathsize);
   static const char *GetAppRootFolder(void);

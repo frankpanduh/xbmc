@@ -75,6 +75,9 @@ public:
   void GetConnectedOutputs(std::vector<std::string>* outputs);
   void MoveToTouchscreen();
 
+  void DisplayRateSwitch(float fps, int dynamicRange);
+  void DisplayRateReset();
+
   // winevents override
   bool MessagePump() override;
 
@@ -96,6 +99,4 @@ private:
   void FillInVideoModes(int screenIdx);
   bool SwitchToVideoMode(int width, int height, double refreshrate);
   CADisplayLinkWrapper* m_pDisplayLink;
-  int m_internalTouchscreenResolutionWidth = -1;
-  int m_internalTouchscreenResolutionHeight = -1;
 };

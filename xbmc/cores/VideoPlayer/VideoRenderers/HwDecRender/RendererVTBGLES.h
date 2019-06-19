@@ -20,6 +20,9 @@ public:
   static CBaseRenderer* Create(CVideoBuffer *buffer);
   static bool Register();
 
+  bool Configure(const VideoPicture &picture, float fps, unsigned int orientation) override;
+  void UnInit() override;
+
   // Player functions
   void ReleaseBuffer(int idx) override;
   bool NeedBuffer(int idx) override;

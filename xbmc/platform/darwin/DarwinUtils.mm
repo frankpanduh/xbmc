@@ -317,6 +317,20 @@ const char *CDarwinUtils::GetOSXVersionString(void)
 #endif
 }
 
+bool CDarwinUtils::IsAppleTV4KOrAbove(void)
+{
+  static int isAppleTV4KOrAbove = -1;
+  if (isAppleTV4KOrAbove == -1)
+  {
+    isAppleTV4KOrAbove = 0;
+#if defined(TARGET_DARWIN_TVOS)
+    if (std::string(CDarwinUtils::getIosPlatformString()) != "AppleTV5,3")
+      isAppleTV4KOrAbove = 1;
+#endif
+  }
+  return isAppleTV4KOrAbove == 1;
+}
+
 std::string CDarwinUtils::GetFrameworkPath(bool forPython)
 {
   CCocoaAutoPool pool;

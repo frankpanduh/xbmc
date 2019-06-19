@@ -261,7 +261,7 @@ bool CWinSystemTVOS::GetScreenResolution(int* w, int* h, double* fps, int screen
   CGSize screenSize = [screen currentMode].size;
   *w = screenSize.width;
   *h = screenSize.height;
-  *fps = 0.0;
+  *fps = [g_xbmcController getDisplayRate];;
 
   //if current mode is 0x0 (happens with external screens which aren't active)
   //then use the preferred mode
@@ -279,21 +279,8 @@ bool CWinSystemTVOS::GetScreenResolution(int* w, int* h, double* fps, int screen
   // the device and eagl gives the correct values in all cases.
   if(screenIdx == 0)
   {
-    // at very first start up we cache the internal screen resolution
-    // because when using external screens and need to go back
-    // to internal we are not able to determine the eagl bounds
-    // before we really switched back to internal
-    // but display settings ask for the internal resolution before
-    // switching. So we give the cached values back in that case.
-    if (m_internalTouchscreenResolutionWidth == -1 &&
-        m_internalTouchscreenResolutionHeight == -1)
-    {
-      m_internalTouchscreenResolutionWidth = [g_xbmcController getScreenSize].width;
-      m_internalTouchscreenResolutionHeight = [g_xbmcController getScreenSize].height;
-    }
-    
-    *w = m_internalTouchscreenResolutionWidth;
-    *h = m_internalTouchscreenResolutionHeight;
+    *w = [g_xbmcController getScreenSize].width;
+    *h = [g_xbmcController getScreenSize].height;
   }
   CLog::Log(LOGDEBUG,"Current resolution Screen: %i with %i x %i",screenIdx, *w, *h);
   return true;
@@ -324,11 +311,8 @@ void CWinSystemTVOS::FillInVideoModes(int screenIdx)
   // Add full screen settings for additional monitors
   RESOLUTION_INFO res;
   int w, h;
-  // atm we don't get refreshrate info from iOS
-  // but this may change in the future. In that case
-  // we will adapt this code for filling some
-  // useful info into this local var :)
-  double refreshrate = 0.0;
+
+  double refreshrate = [g_xbmcController getDisplayRate];
   //screen 0 is mainscreen - 1 has to be the external one...
   UIScreen* aScreen = [[UIScreen screens]objectAtIndex:screenIdx];
   UIScreenMode* mode = [aScreen currentMode];
@@ -506,4 +490,22 @@ void CWinSystemTVOS::MoveToTouchscreen()
 bool CWinSystemTVOS::MessagePump()
 {
   return m_winEvents->MessagePump();
+}
+
+void CWinSystemTVOS::DisplayRateSwitch(float fps, int dynamicRange)
+{
+  // on tvOS, there is no API to get a list of sizes and refresh rates
+  // which is required for normal display switching. So we have to bypass
+  // the normal methods and force a switch in gles renderer.
+  if (fps == 0.0)
+    return;
+
+  // Adjust refresh rate and dynamic range to match source fps
+  [g_xbmcController displayRateSwitch:fps withDynamicRange:dynamicRange];
+}
+
+void CWinSystemTVOS::DisplayRateReset()
+{
+  // see comment in CWinSystemIOS::DisplayRateSwitch
+  [g_xbmcController displayRateReset];
 }

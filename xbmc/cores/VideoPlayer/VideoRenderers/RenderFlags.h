@@ -62,6 +62,11 @@
 #define CONF_FLAGS_STEREO_CADANCE_LEFT_RIGHT 0x000000
 #define CONF_FLAGS_STEREO_CADANCE_RIGHT_LEFT 0x008000
 
+#define CONF_FLAGS_DYNAMIC_RANGE(a) ((a) & 0x00030000)
+#define CONF_FLAGS_DYNAMIC_RANGE_SDR   0x00000000
+#define CONF_FLAGS_DYNAMIC_RANGE_HDR10 0x00010000
+#define CONF_FLAGS_DYNAMIC_RANGE_DOLBYVISION 0x00020000
+
 unsigned int GetFlagsColorMatrix(unsigned int color_matrix, unsigned width, unsigned height);
 unsigned int GetFlagsChromaPosition(unsigned int chroma_position);
 unsigned int GetFlagsColorPrimaries(unsigned int color_primaries);

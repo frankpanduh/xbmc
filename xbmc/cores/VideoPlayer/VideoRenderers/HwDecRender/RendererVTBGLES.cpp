@@ -18,6 +18,7 @@
 #include "windowing/ios/WinSystemIOS.h"
 #define WIN_SYSTEM_CLASS CWinSystemIOS
 #elif defined(TARGET_DARWIN_TVOS)
+#include "cores/VideoPlayer/VideoRenderers/RenderFlags.h"
 #include "windowing/tvos/WinSystemTVOS.h"
 #define WIN_SYSTEM_CLASS CWinSystemTVOS
 #endif
@@ -74,6 +75,40 @@ CRendererVTB::~CRendererVTB()
   {
     DeleteTexture(i);
   }
+}
+
+bool CRendererVTB::Configure(const VideoPicture &picture, float fps, unsigned int orientation)
+{
+#ifdef TARGET_DARWIN_TVOS
+  int dynamicRange = 1;
+  switch(CONF_FLAGS_DYNAMIC_RANGE(picture.iFlags))
+  {
+    case CONF_FLAGS_DYNAMIC_RANGE_SDR:
+      dynamicRange = 1;
+      break;
+    case CONF_FLAGS_DYNAMIC_RANGE_HDR10:
+      dynamicRange = 3;
+      break;
+    case CONF_FLAGS_DYNAMIC_RANGE_DOLBYVISION:
+      dynamicRange = 4;
+      break;
+  }
+
+  CWinSystemTVOS* winSystem = dynamic_cast<CWinSystemTVOS*>(CServiceBroker::GetWinSystem());
+  winSystem->DisplayRateSwitch(fps, dynamicRange);
+#endif
+
+  return CLinuxRendererGLES::Configure(picture, fps, orientation);
+}
+
+void CRendererVTB::UnInit()
+{
+#ifdef TARGET_DARWIN_TVOS
+  CWinSystemTVOS* winSystem = dynamic_cast<CWinSystemTVOS*>(CServiceBroker::GetWinSystem());
+  winSystem->DisplayRateReset();
+#endif
+
+  CLinuxRendererGLES::UnInit();
 }
 
 void CRendererVTB::ReleaseBuffer(int idx)
