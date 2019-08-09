@@ -156,6 +156,32 @@ if test "@platform_os@" = "darwin_embedded"; then
   ac_cv_func_getentropy=no
   ac_cv_func_utimensat=no
 
+  if test "${PACKAGE_NAME}" = "python3" ; then
+    ac_cv_file__dev_ptmx=yes
+    ac_cv_little_endian_double=yes
+    ac_cv_func_memrchr=no
+    ac_cv_func_getresuid=no
+    ac_cv_func_getresgid=no
+    ac_cv_func_setresgid=no
+    ac_cv_func_setresuid=no
+    ac_cv_func_plock=no
+    ac_cv_func_dup3=no
+    ac_cv_func_pipe2=no
+    ac_cv_func_preadv=no
+    ac_cv_func_pwritev=no
+    ac_cv_func_preadv2=no
+    ac_cv_func_pwritev2=no
+    ac_cv_func_mkfifoat=no
+    ac_cv_func_mknodat=no
+    ac_cv_func_posix_fadvise=no
+    ac_cv_func_posix_fallocate=no
+    ac_cv_func_sigwaitinfo=no
+    ac_cv_func_sigtimedwait=no
+    ac_cv_func_pthread_getcpuclockid=no
+    ac_cv_func_sched_setscheduler=no
+    ac_cv_func_sched_setparam=no
+  fi
+
   # tweaks for libffi
   if test "${PACKAGE_NAME}" = "libffi" ; then
     if test "@use_cpu@" = "arm64"; then

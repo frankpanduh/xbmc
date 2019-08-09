@@ -1,10 +1,12 @@
 include ../../Makefile.include
 DEPS= ../../Makefile.include Makefile apple.patch crosscompile.patch android.patch \
-       fix-datetime.patch modules.setup make-fork-optional.patch android-nl_langinfo.patch
+       fix-datetime.patch modules.setup android-nl_langinfo.patch \
+       urllib.patch dynload_shlib.patch xcompile.patch
+       #posixmodule.patch
 
 # lib name, version
 LIBNAME=Python
-VERSION=3.7.3
+VERSION=3.7.1
 SOURCE=$(LIBNAME)-$(VERSION)
 ARCHIVE=$(SOURCE).tar.xz
 BASE_URL=https://www.python.org/ftp/python/$(VERSION)
@@ -39,9 +41,12 @@ $(PLATFORM): $(TARBALLS_LOCATION)/$(ARCHIVE) $(DEPS)
 	cd $(PLATFORM); patch -p1 -i ../android.patch
 	cd $(PLATFORM); patch -p1 -i ../fix-ffi.patch
 	cd $(PLATFORM); patch -p1 -i ../android-nl_langinfo.patch
-	cd $(PLATFORM); patch -p1 -i ../apple.patch
+#	cd $(PLATFORM); patch -p1 -i ../apple.patch
 ifeq ($(OS),darwin_embedded)
-	cd $(PLATFORM); patch -p1 -i ../make-fork-optional.patch
+	cd $(PLATFORM); patch -p1 -i ../urllib.patch
+	cd $(PLATFORM); patch -p1 -i ../xcompile.patch
+	cd $(PLATFORM); patch -p1 -i ../dynload_shlib.patch
+#	cd $(PLATFORM); patch -p1 -i ../posixmodule.patch
 	cd $(PLATFORM); sed -ie 's|MACHDEP="unknown"|MACHDEP="darwin"|' configure.ac
 endif
 	cp modules.setup $(PLATFORM)/Modules/Setup.dist
