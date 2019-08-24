@@ -1,0 +1,72 @@
+Forked from: fuzzard/xbmc
+
+Testing for use on tvOS 12.4. 
+
+Built using:
+
+#####Commands Used#####
+git clone https://github.com/xbmc/xbmc kodi
+cd $HOME/kodi/tools/depends
+./bootstrap
+./configure --host=arm-apple-darwin --with-platform=tvos --with-sdk=12.04
+cd $HOME/kodi
+make -C tools/depends/target/binary-addons
+######END########
+
+When attempting to build with XCode using:
+
+"/Users/Shared/xbmc-depends/x86_64-darwin18.7.0-native/bin/cmake -G Xcode -DCMAKE_TOOLCHAIN_FILE=/Users/Shared/xbmc-depends/appletvos12.4_arm64-target-debug/share/Toolchain.cmake /kodi"
+
+Resulted in this output: 
+
+$ /Users/Shared/xbmc-depends/x86_64-darwin18.7.0-native/bin/cmake -G Xcode -DCMAKE_TOOLCHAIN_FILE=/Users/Shared/xbmc-depends/appletvos12.4_arm64-target-debug/share/Toolchain.cmake /kodi
+-- Toolchain enabled IOS bundle for project kodi
+-- The CXX compiler identification is AppleClang 10.0.1.10010046
+-- The C compiler identification is AppleClang 10.0.1.10010046
+-- The ASM compiler identification is AppleClang
+-- Found assembler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
+-- Check for working CXX compiler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++
+-- Check for working CXX compiler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++ -- broken
+CMake Error at /Users/Shared/xbmc-depends/x86_64-darwin18.7.0-native/share/cmake-3.14/Modules/CMakeTestCXXCompiler.cmake:53 (message):
+  The C++ compiler
+
+    "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++"
+
+  is not able to compile a simple test program.
+  
+   
+  -----------------------
+
+    Change Dir: /Users/$USERNAME/kodi/CMakeFiles/CMakeTmp
+    
+    Run Build Command(s):/usr/bin/xcodebuild -project CMAKE_TRY_COMPILE.xcodeproj build -target cmTC_4f562 -configuration Debug -hideShellScriptEnvironment 
+    User defaults from command line:
+        HideShellScriptEnvironment = YES
+    
+    Prepare build
+    note: Using legacy build system
+    
+    === BUILD TARGET cmTC_4f562 OF PROJECT CMAKE_TRY_COMPILE WITH CONFIGURATION Debug ===
+    
+    Check dependencies
+    Code Signing Error: Bundle identifier is missing. cmTC_4f562 doesn't have a bundle identifier for the Debug build configuration. Add a value for PRODUCT_BUNDLE_IDENTIFIER in the build settings editor.
+    
+    ** BUILD FAILED **
+    
+    
+    The following build commands failed:
+    	Check dependencies
+    (1 failure)
+    
+
+  CMake will not be able to correctly generate this project.
+Call Stack (most recent call first):
+  CMakeLists.txt:2 (project)
+
+
+-- Configuring incomplete, errors occurred!
+See also "/kodi/CMakeFiles/CMakeOutput.log".
+See also "/kodi/CMakeFiles/CMakeError.log".
+
+---------
+
