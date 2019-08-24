@@ -7,24 +7,23 @@
  */
 
 #include "GUIFeatureList.h"
+
 #include "GUIConfigurationWizard.h"
 #include "GUIControllerDefines.h"
-#include "games/addons/input/GameClientInput.h"
 #include "games/addons/GameClient.h"
-#include "games/controllers/guicontrols/GUIFeatureControls.h"
-#include "games/controllers/guicontrols/GUIFeatureButton.h"
-#include "games/controllers/guicontrols/GUIFeatureFactory.h"
-#include "games/controllers/guicontrols/GUIFeatureTranslator.h"
+#include "games/addons/input/GameClientInput.h"
 #include "games/controllers/Controller.h"
 #include "games/controllers/ControllerFeature.h"
+#include "games/controllers/guicontrols/GUIFeatureButton.h"
+#include "games/controllers/guicontrols/GUIFeatureControls.h"
+#include "games/controllers/guicontrols/GUIFeatureFactory.h"
+#include "games/controllers/guicontrols/GUIFeatureTranslator.h"
 #include "guilib/GUIButtonControl.h"
 #include "guilib/GUIControlGroupList.h"
 #include "guilib/GUIImage.h"
 #include "guilib/GUILabelControl.h"
-#include "guilib/GUIMessage.h"
 #include "guilib/GUIWindow.h"
 #include "guilib/LocalizeStrings.h"
-#include "messaging/ApplicationMessenger.h"
 
 using namespace KODI;
 using namespace GAME;
@@ -134,7 +133,7 @@ void CGUIFeatureList::Load(const ControllerPtr& controller)
     for (CGUIButtonControl* pButton : buttons)
       m_guiList->AddControl(pButton);
 
-    m_buttonCount += buttons.size();
+    m_buttonCount += static_cast<unsigned int>(buttons.size());
   }
 }
 

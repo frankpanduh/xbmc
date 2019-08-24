@@ -8,13 +8,13 @@
 
 #pragma once
 
-#include <vector>
-#include <string>
-#include <memory>
-
 #include "IPlayerCallback.h"
-#include "VideoSettings.h"
 #include "Interface/StreamInfo.h"
+#include "VideoSettings.h"
+
+#include <memory>
+#include <string>
+#include <vector>
 
 #define CURRENT_STREAM -1
 #define CAPTUREFLAG_CONTINUOUS  0x01 //after a render is done, render a new one immediately
@@ -226,6 +226,14 @@ public:
   // video and audio settings
   virtual CVideoSettings GetVideoSettings() { return CVideoSettings(); };
   virtual void SetVideoSettings(CVideoSettings& settings) {};
+
+  /*!
+   * \brief Check if any players are playing a game
+   *
+   * \return True if at least one player has an input device attached to the
+   * game, false otherwise
+   */
+  virtual bool HasGameAgent() { return false; }
 
   std::string m_name;
   std::string m_type;

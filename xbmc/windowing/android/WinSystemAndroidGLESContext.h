@@ -8,10 +8,10 @@
 
 #pragma once
 
-#include "utils/EGLUtils.h"
-#include "rendering/gles/RenderSystemGLES.h"
-#include "utils/GlobalsHandling.h"
 #include "WinSystemAndroid.h"
+#include "rendering/gles/RenderSystemGLES.h"
+#include "utils/EGLUtils.h"
+#include "utils/GlobalsHandling.h"
 
 class CWinSystemAndroidGLESContext : public CWinSystemAndroid, public CRenderSystemGLES
 {
@@ -30,6 +30,8 @@ public:
   bool SetFullScreen(bool fullScreen, RESOLUTION_INFO& res, bool blankOtherDisplays) override;
 
   virtual std::unique_ptr<CVideoSync> GetVideoSync(void *clock) override;
+
+  float GetFrameLatencyAdjustment() override;
 
   EGLDisplay GetEGLDisplay() const;
   EGLSurface GetEGLSurface() const;

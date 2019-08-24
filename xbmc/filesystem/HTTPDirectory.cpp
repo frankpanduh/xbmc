@@ -7,19 +7,21 @@
  */
 
 #include "HTTPDirectory.h"
-#include "ServiceBroker.h"
-#include "URL.h"
+
 #include "CurlFile.h"
 #include "FileItem.h"
-#include "utils/RegExp.h"
+#include "ServiceBroker.h"
+#include "URL.h"
 #include "settings/AdvancedSettings.h"
 #include "settings/SettingsComponent.h"
-#include "utils/StringUtils.h"
 #include "utils/CharsetConverter.h"
-#include "utils/log.h"
-#include "utils/URIUtils.h"
 #include "utils/HTMLUtil.h"
-#include "climits"
+#include "utils/RegExp.h"
+#include "utils/StringUtils.h"
+#include "utils/URIUtils.h"
+#include "utils/log.h"
+
+#include <climits>
 
 using namespace XFILE;
 
@@ -103,6 +105,18 @@ bool CHTTPDirectory::GetDirectory(const CURL& url, CFileItemList &items)
         strLinkOptions = strLinkBase.substr(pos);
         strLinkBase.erase(pos);
       }
+      
+      // encoding + and ; to URL encode if it is not already encoded by http server used on the remote server (example: Apache)
+      // more characters may be added here when required when required by certain http servers
+      pos = strLinkBase.find_first_of("+;");
+      while (pos != std::string::npos) 
+      {
+        std::stringstream convert;
+        convert << '%' << std::hex << int(strLinkBase.at(pos));
+        strLinkBase.replace(pos, 1, convert.str());
+        pos = strLinkBase.find_first_of("+;");
+      }
+
       std::string strLinkTemp = strLinkBase;
 
       URIUtils::RemoveSlashAtEnd(strLinkTemp);

@@ -10,16 +10,17 @@
 
 #include "ServiceBroker.h"
 #include "Texture.h"
-#include "windowing/GraphicContext.h"
-#include "utils/log.h"
-#include "settings/Settings.h"
-#include "settings/SettingsComponent.h"
-#include "filesystem/SpecialProtocol.h"
-#include "filesystem/XbtManager.h"
-#include "utils/URIUtils.h"
-#include "utils/StringUtils.h"
 #include "XBTF.h"
 #include "XBTFReader.h"
+#include "filesystem/SpecialProtocol.h"
+#include "filesystem/XbtManager.h"
+#include "settings/Settings.h"
+#include "settings/SettingsComponent.h"
+#include "utils/StringUtils.h"
+#include "utils/URIUtils.h"
+#include "utils/log.h"
+#include "windowing/GraphicContext.h"
+
 #include <lzo/lzo1x.h>
 
 #ifdef TARGET_WINDOWS_DESKTOP
@@ -45,6 +46,11 @@ CTextureBundleXBT::CTextureBundleXBT(bool themeBundle)
 }
 
 CTextureBundleXBT::~CTextureBundleXBT(void)
+{
+  CloseBundle();
+}
+
+void CTextureBundleXBT::CloseBundle()
 {
   if (m_XBTFReader != nullptr && m_XBTFReader->IsOpen())
   {

@@ -199,7 +199,7 @@ macro (build_addon target prefix libs)
     endif()
 
     # TODO: remove this hack after v18
-    string(REPLACE "<platform>\@PLATFORM\@</platform>" "<platform>@PLATFORM_TAG@</platform>" addon_file "${addon_file}")
+    string(REPLACE "<platform>\@PLATFORM\@</platform>" "<platform>\@PLATFORM_TAG\@</platform>" addon_file "${addon_file}")
 
     string(CONFIGURE "${addon_file}" addon_file_conf @ONLY)
     file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${target}/addon.xml CONTENT "${addon_file_conf}")
@@ -276,6 +276,18 @@ macro (build_addon target prefix libs)
         install(FILES ${${prefix}_ADDITIONAL_BINARY} DESTINATION ${target}
                 COMPONENT ${target}-${${prefix}_VERSION}-${PLATFORM_TAG})
       endif()
+      if(${prefix}_ADDITIONAL_BINARY_EXE)
+        install(PROGRAMS ${${prefix}_ADDITIONAL_BINARY_EXE} DESTINATION ${target}
+                COMPONENT ${target}-${${prefix}_VERSION}-${PLATFORM_TAG})
+      endif()
+      if(${prefix}_ADDITIONAL_BINARY_PARTS)
+        install(FILES ${${prefix}_ADDITIONAL_BINARY_PARTS} DESTINATION ${target}
+                COMPONENT ${target}-${${prefix}_VERSION}-${PLATFORM_TAG})
+      endif()
+      if(${prefix}_ADDITIONAL_BINARY_DIRS)
+        install(DIRECTORY ${${prefix}_ADDITIONAL_BINARY_DIRS} DESTINATION ${target} USE_SOURCE_PERMISSIONS
+                COMPONENT ${target}-${${prefix}_VERSION}-${PLATFORM_TAG})
+      endif()
     else() # NOT WIN32
       if(NOT CPACK_PACKAGE_DIRECTORY)
         set(CPACK_PACKAGE_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -289,10 +301,24 @@ macro (build_addon target prefix libs)
                 COMPONENT ${target}-${${prefix}_VERSION}-${PLATFORM_TAG})
       endif()
       if(${prefix}_CUSTOM_DATA)
-        install(DIRECTORY ${${prefix}_CUSTOM_DATA} DESTINATION ${target}/resources)
+        install(DIRECTORY ${${prefix}_CUSTOM_DATA} DESTINATION ${target}/resources
+                COMPONENT ${target}-${${prefix}_VERSION}-${PLATFORM_TAG})
       endif()
       if(${prefix}_ADDITIONAL_BINARY)
-        install(FILES ${${prefix}_ADDITIONAL_BINARY} DESTINATION ${target})
+        install(FILES ${${prefix}_ADDITIONAL_BINARY} DESTINATION ${target}
+                COMPONENT ${target}-${${prefix}_VERSION}-${PLATFORM_TAG})
+      endif()
+      if(${prefix}_ADDITIONAL_BINARY_EXE)
+        install(PROGRAMS ${${prefix}_ADDITIONAL_BINARY_EXE} DESTINATION ${target}
+                COMPONENT ${target}-${${prefix}_VERSION}-${PLATFORM_TAG})
+      endif()
+      if(${prefix}_ADDITIONAL_BINARY_PARTS)
+        install(FILES ${${prefix}_ADDITIONAL_BINARY_PARTS} DESTINATION ${target}
+                COMPONENT ${target}-${${prefix}_VERSION}-${PLATFORM_TAG})
+      endif()
+      if(${prefix}_ADDITIONAL_BINARY_DIRS)
+        install(DIRECTORY ${${prefix}_ADDITIONAL_BINARY_DIRS} DESTINATION ${target} USE_SOURCE_PERMISSIONS
+                COMPONENT ${target}-${${prefix}_VERSION}-${PLATFORM_TAG})
       endif()
     endif()
     add_cpack_workaround(${target} ${${prefix}_VERSION} ${ext})
@@ -337,14 +363,24 @@ macro (build_addon target prefix libs)
     if(${prefix}_ADDITIONAL_BINARY)
       install(FILES ${${prefix}_ADDITIONAL_BINARY} DESTINATION ${CMAKE_INSTALL_LIBDIR}/addons/${target})
     endif()
+    if(${prefix}_ADDITIONAL_BINARY_EXE)
+      install(PROGRAMS ${${prefix}_ADDITIONAL_BINARY_EXE} DESTINATION ${CMAKE_INSTALL_LIBDIR}/addons/${target})
+    endif()
+    if(${prefix}_ADDITIONAL_BINARY_PARTS)
+      install(FILES ${${prefix}_ADDITIONAL_BINARY_PARTS} DESTINATION ${CMAKE_INSTALL_LIBDIR}/addons/${target})
+    endif()
+    if(${prefix}_ADDITIONAL_BINARY_DIRS)
+      install(DIRECTORY ${${prefix}_ADDITIONAL_BINARY_DIRS} DESTINATION ${CMAKE_INSTALL_LIBDIR}/addons/${target} USE_SOURCE_PERMISSIONS)
+    endif()
   endif()
   if(${APP_NAME_UC}_BUILD_DIR)
     file(GLOB_RECURSE files ${CMAKE_CURRENT_SOURCE_DIR}/${target}/*)
     if(${prefix}_CUSTOM_DATA)
+      get_filename_component(dname ${${prefix}_CUSTOM_DATA} NAME)
       add_custom_command(TARGET ${target} POST_BUILD
                          COMMAND ${CMAKE_COMMAND} -E copy_directory
                                  ${${prefix}_CUSTOM_DATA}
-                                 ${${APP_NAME_UC}_BUILD_DIR}/addons/${target}/resources)
+                                 ${${APP_NAME_UC}_BUILD_DIR}/addons/${target}/resources/${dname})
     endif()
     foreach(file ${files})
       string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/${target}/" "" name "${file}")

@@ -55,10 +55,13 @@
 #include "utils/URIUtils.h"
 #include "utils/log.h"
 #include "utils/StringUtils.h"
-#include "utils/Base64.h"
 #include "ServiceBroker.h"
 #include "settings/AdvancedSettings.h"
 #include "settings/SettingsComponent.h"
+
+#if TAGLIB_MAJOR_VERSION <= 1 && TAGLIB_MINOR_VERSION < 11
+#include "utils/Base64.h"
+#endif
 
 using namespace TagLib;
 using namespace MUSIC_INFO;
@@ -394,8 +397,8 @@ bool CTagLoaderTagLib::ParseTag(ID3v2::Tag *id3v2, EmbeddedArt *art, MUSIC_INFO:
       // Loop through any UFID frames and set them
       for (ID3v2::FrameList::ConstIterator ut = it->second.begin(); ut != it->second.end(); ++ut)
       {
-        auto ufid = reinterpret_cast<ID3v2::UniqueFileIdentifierFrame*> (*ut);
-        if (ufid->owner() == "http://musicbrainz.org")
+        auto ufid = dynamic_cast<ID3v2::UniqueFileIdentifierFrame*> (*ut);
+        if (ufid && ufid->owner() == "http://musicbrainz.org")
         {
           // MusicBrainz pads with a \0, but the spec requires binary, be cautious
           char cUfid[64];
@@ -562,6 +565,29 @@ bool CTagLoaderTagLib::ParseTag(APE::Tag *ape, EmbeddedArt *art, CMusicInfoTag& 
       tag.SetMusicBrainzTrackID(it->second.toString().to8Bit(true));
     else if (it->first == "MUSICBRAINZ_ALBUMTYPE")
       SetReleaseType(tag, StringListToVectorString(it->second.toStringList()));
+    else if (it->first == "COVER ART (FRONT)")
+    {
+      TagLib::ByteVector tdata = it->second.binaryData();
+      // The image data follows a null byte, which can optionally be preceded by a filename
+      const uint offset = tdata.find('\0') + 1;
+      ByteVector bv(tdata.data() + offset, tdata.size() - offset);
+      // Infer the mimetype
+      std::string mime{};
+      if (bv.startsWith("\xFF\xD8\xFF"))
+        mime = "image/jpeg";
+      else if (bv.startsWith("\x89\x50\x4E\x47"))
+        mime = "image/png";
+      else if (bv.startsWith("\x47\x49\x46\x38"))
+        mime = "image/gif";
+      else if (bv.startsWith("\x42\x4D"))
+        mime = "image/bmp";
+      if ((offset > 0) && (offset <= tdata.size()) && (mime.size() > 0))
+      {
+        tag.SetCoverArtInfo(bv.size(), mime);
+        if (art)
+          art->Set(reinterpret_cast<const uint8_t*>(bv.data()), bv.size(), mime);
+      }
+    }
     else if (CServiceBroker::GetSettingsComponent()->GetAdvancedSettings()->m_logLevel == LOG_LEVEL_MAX)
       CLog::Log(LOGDEBUG, "unrecognized APE tag: %s", it->first.toCString(true));
   }
@@ -1003,12 +1029,12 @@ void CTagLoaderTagLib::SetGenre(CMusicInfoTag &tag, const std::vector<std::strin
    a number is specified, thus this workaround.
    */
   std::vector<std::string> genres;
-  for (std::vector<std::string>::const_iterator i = values.begin(); i != values.end(); ++i)
+  for (const std::string& i : values)
   {
-    std::string genre = *i;
+    std::string genre = i;
     if (StringUtils::IsNaturalNumber(genre))
     {
-      int number = strtol(i->c_str(), nullptr, 10);
+      int number = strtol(i.c_str(), nullptr, 10);
       if (number >= 0 && number < 256)
         genre = ID3v1::genre(number).to8Bit(true);
     }

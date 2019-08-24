@@ -7,6 +7,9 @@
  */
 
 #include "ControllerInstaller.h"
+
+#include "FileItem.h"
+#include "ServiceBroker.h"
 #include "addons/Addon.h"
 #include "addons/AddonInstaller.h"
 #include "addons/AddonManager.h"
@@ -17,10 +20,8 @@
 #include "guilib/LocalizeStrings.h"
 #include "guilib/WindowIDs.h"
 #include "messaging/helpers/DialogOKHelper.h"
-#include "utils/log.h"
 #include "utils/StringUtils.h"
-#include "FileItem.h"
-#include "ServiceBroker.h"
+#include "utils/log.h"
 
 using namespace KODI;
 using namespace GAME;
@@ -62,7 +63,7 @@ void CControllerInstaller::Process()
   for (const auto &addon : installableAddons)
   {
     CFileItemPtr item(new CFileItem(addon->Name()));
-    item->SetIconImage(addon->Icon());
+    item->SetArt("icon", addon->Icon());
     items.Add(std::move(item));
   }
 
@@ -100,7 +101,7 @@ void CControllerInstaller::Process()
     pProgressDialog->SetLine(0, CVariant{ progressText });
 
     // Set dialog percentage
-    const unsigned int percentage = 100 * (installedCount + 1) / installableAddons.size();
+    const unsigned int percentage = 100 * (installedCount + 1) / static_cast<unsigned int>(installableAddons.size());
     pProgressDialog->SetPercentage(percentage);
 
     if (!CAddonInstaller::GetInstance().InstallOrUpdate(addon->ID(), false, false))

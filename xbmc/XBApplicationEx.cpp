@@ -14,7 +14,7 @@
 #include "threads/SystemClock.h"
 #include "commons/Exception.h"
 #ifdef TARGET_POSIX
-#include "platform/linux/XTimeUtils.h"
+#include "platform/posix/XTimeUtils.h"
 #endif
 #include "AppParamParser.h"
 
@@ -32,7 +32,7 @@ CXBApplicationEx::~CXBApplicationEx() = default;
 /* Destroy the app */
 void CXBApplicationEx::Destroy()
 {
-  CLog::Log(LOGNOTICE, "destroy");
+  CLog::Log(LOGNOTICE, "XBApplicationEx: destroying...");
   // Perform app-specific cleanup
   Cleanup();
 }
@@ -82,6 +82,6 @@ int CXBApplicationEx::Run(const CAppParamParser &params)
   }
   Destroy();
 
-  CLog::Log(LOGNOTICE, "application stopped..." );
+  CLog::Log(LOGNOTICE, "XBApplicationEx: application stopped!" );
   return m_ExitCode;
 }

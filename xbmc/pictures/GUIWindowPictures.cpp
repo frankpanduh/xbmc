@@ -21,7 +21,6 @@
 #include "PictureInfoLoader.h"
 #include "guilib/GUIComponent.h"
 #include "guilib/GUIWindowManager.h"
-#include "input/Key.h"
 #include "view/GUIViewState.h"
 #include "messaging/helpers/DialogOKHelper.h"
 #include "PlayListPlayer.h"
@@ -39,7 +38,7 @@
 #include "GUIWindowSlideShow.h"
 
 #ifdef TARGET_POSIX
-#include "platform/linux/XTimeUtils.h"
+#include "platform/posix/XTimeUtils.h"
 #endif
 
 #define CONTROL_BTNVIEWASICONS      2

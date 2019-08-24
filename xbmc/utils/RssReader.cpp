@@ -15,9 +15,6 @@
 #include "URL.h"
 #include "filesystem/File.h"
 #include "filesystem/CurlFile.h"
-#if defined(TARGET_DARWIN)
-#include "platform/darwin/osx/CocoaInterface.h"
-#endif
 #include "settings/AdvancedSettings.h"
 #include "settings/SettingsComponent.h"
 #include "guilib/LocalizeStrings.h"
@@ -25,7 +22,7 @@
 #include "threads/SingleLock.h"
 #include "log.h"
 #ifdef TARGET_POSIX
-#include "platform/linux/XTimeUtils.h"
+#include "platform/posix/XTimeUtils.h"
 #endif
 
 #define RSS_COLOR_BODY      0
@@ -95,7 +92,7 @@ void CRssReader::AddToQueue(int iAdd)
   {
     StopThread();
     m_bIsRunning = true;
-    CThread::Create(false, THREAD_MINSTACKSIZE);
+    CThread::Create(false);
   }
 }
 

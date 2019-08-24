@@ -30,7 +30,6 @@
 #include "rendering/RenderSystem.h"
 #include "guilib/LocalizeStrings.h"
 #include "TextureDatabase.h"
-#include "threads/SingleLock.h"
 #include "utils/log.h"
 #include "utils/Random.h"
 #include "utils/Variant.h"
@@ -39,7 +38,7 @@
 #include "pictures/PictureThumbLoader.h"
 #include "PlayListPlayer.h"
 #ifdef TARGET_POSIX
-#include "platform/linux/XTimeUtils.h"
+#include "platform/posix/XTimeUtils.h"
 #endif
 #include <random>
 
@@ -510,13 +509,9 @@ void CGUIWindowSlideShow::Process(unsigned int currentTime, CDirtyRegionList &re
     }
   }
 
-  if (m_slides.at(m_iCurrentSlide)->IsVideo() &&
-      m_iVideoSlide != m_iCurrentSlide)
-  {
-    if (!PlayVideo())
-      return;
+  bool bPlayVideo = m_slides.at(m_iCurrentSlide)->IsVideo() && m_iVideoSlide != m_iCurrentSlide;
+  if (bPlayVideo)
     bSlideShow = false;
-  }
 
   // render the current image
   if (m_Image[m_iCurrentPic].IsLoaded())
@@ -604,6 +599,8 @@ void CGUIWindowSlideShow::Process(unsigned int currentTime, CDirtyRegionList &re
       }
       m_iCurrentSlide = m_iNextSlide;
       m_iNextSlide    = GetNextSlide();
+
+      bPlayVideo = m_slides.at(m_iCurrentSlide)->IsVideo() && m_iVideoSlide != m_iCurrentSlide;
     }
     AnnouncePlayerPlay(m_slides.at(m_iCurrentSlide));
 
@@ -611,6 +608,9 @@ void CGUIWindowSlideShow::Process(unsigned int currentTime, CDirtyRegionList &re
     m_fZoom = 1.0f;
     m_fRotate = 0.0f;
   }
+
+  if (bPlayVideo && !PlayVideo())
+      return;
 
   if (m_Image[m_iCurrentPic].IsLoaded())
     CServiceBroker::GetGUI()->GetInfoManager().GetInfoProviders().GetPicturesInfoProvider().SetCurrentSlide(m_slides.at(m_iCurrentSlide).get());
@@ -630,14 +630,30 @@ void CGUIWindowSlideShow::Render()
   if (m_slides.empty())
     return;
 
-  CServiceBroker::GetWinSystem()->GetGfxContext().Clear(0xff000000);
+  CGraphicContext& gfxCtx = CServiceBroker::GetWinSystem()->GetGfxContext();
+  gfxCtx.Clear(0xff000000);
 
   if (m_slides.at(m_iCurrentSlide)->IsVideo())
   {
-    CServiceBroker::GetWinSystem()->GetGfxContext().SetViewWindow(0, 0, m_coordsRes.iWidth, m_coordsRes.iHeight);
-    CServiceBroker::GetWinSystem()->GetGfxContext().SetRenderingResolution(CServiceBroker::GetWinSystem()->GetGfxContext().GetVideoResolution(), false);
-    g_application.GetAppPlayer().Render(true, 255);
-    CServiceBroker::GetWinSystem()->GetGfxContext().SetRenderingResolution(m_coordsRes, m_needsScaling);
+    gfxCtx.SetViewWindow(0, 0, m_coordsRes.iWidth, m_coordsRes.iHeight);
+    gfxCtx.SetRenderingResolution(gfxCtx.GetVideoResolution(), false);
+
+    if (g_application.GetAppPlayer().IsRenderingVideoLayer())
+    {
+      const CRect old = gfxCtx.GetScissors();
+      CRect region = GetRenderRegion();
+      region.Intersect(old);
+      gfxCtx.SetScissors(region);
+      gfxCtx.Clear(0);
+      gfxCtx.SetScissors(old);
+    }
+    else
+    {
+      const UTILS::Color alpha = gfxCtx.MergeAlpha(0xff000000) >> 24;
+      g_application.GetAppPlayer().Render(false, alpha);
+    }
+
+    gfxCtx.SetRenderingResolution(m_coordsRes, m_needsScaling);
   }
   else
   {
@@ -650,6 +666,14 @@ void CGUIWindowSlideShow::Render()
 
   RenderErrorMessage();
   CGUIWindow::Render();
+}
+
+void CGUIWindowSlideShow::RenderEx()
+{
+  if (m_slides.at(m_iCurrentSlide)->IsVideo())
+    g_application.GetAppPlayer().Render(false, 255, false);
+
+  CGUIWindow::RenderEx();
 }
 
 int CGUIWindowSlideShow::GetNextSlide()
@@ -920,7 +944,7 @@ bool CGUIWindowSlideShow::OnMessage(CGUIMessage& message)
       m_Resolution = (RESOLUTION) CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_PICTURES_DISPLAYRESOLUTION);
 
       //FIXME: Use GUI resolution for now
-      if (0 /*m_Resolution != CDisplaySettings::GetInstance().GetCurrentResolution() && m_Resolution != INVALID && m_Resolution!=AUTORES*/)
+      if (false /*m_Resolution != CDisplaySettings::GetInstance().GetCurrentResolution() && m_Resolution != INVALID && m_Resolution!=AUTORES*/)
         CServiceBroker::GetWinSystem()->GetGfxContext().SetVideoResolution(m_Resolution, false);
       else
         m_Resolution = CServiceBroker::GetWinSystem()->GetGfxContext().GetVideoResolution();

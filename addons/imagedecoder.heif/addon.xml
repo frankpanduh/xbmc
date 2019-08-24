@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<addon
+  id="imagedecoder.heif"
+  version="1.0.2"
+  name="HEIF image decoder"
+  provider-name="spiff">
+  <requires>
+<import addon="kodi.binary.global.main" version="1.1.0"/>
+<import addon="kodi.binary.instance.imagedecoder" version="2.0.0"/></requires>
+  <extension
+    point="kodi.imagedecoder"
+    library_darwin_embedded="imagedecoder.heif.1.0.2.dylib"
+    extension=".heif|.heic"
+    mimetype="image/heif|image/heic"/>
+  <extension point="xbmc.addon.metadata">
+    <summary>libheif based image decoder</summary>
+    <description>libheif based image decoder</description>
+    <platform>ios-aarch64</platform>
+  </extension>
+</addon>

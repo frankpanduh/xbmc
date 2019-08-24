@@ -27,16 +27,14 @@
 #include "DVDDemuxers/DVDDemux.h"
 #include "DVDDemuxers/DVDDemuxUtils.h"
 #include "DVDDemuxers/DVDFactoryDemuxer.h"
-#include "DVDDemuxers/DVDDemuxFFmpeg.h"
-#include "DVDCodecs/DVDCodecs.h"
 #include "DVDCodecs/DVDFactoryCodec.h"
 #include "DVDCodecs/Video/DVDVideoCodec.h"
 #include "DVDCodecs/Video/DVDVideoCodecFFmpeg.h"
 #include "DVDDemuxers/DVDDemuxVobsub.h"
 #include "Process/ProcessInfo.h"
 
-#include "libavcodec/avcodec.h"
-#include "libswscale/swscale.h"
+#include <libavcodec/avcodec.h>
+#include <libswscale/swscale.h>
 #include "filesystem/File.h"
 #include "cores/FFmpeg.h"
 #include "TextureCache.h"
@@ -47,7 +45,7 @@
 #include <memory>
 
 extern "C" {
-#include "libavformat/avformat.h"
+#include <libavformat/avformat.h>
 }
 
 bool CDVDFileInfo::GetFileDuration(const std::string &path, int& duration)

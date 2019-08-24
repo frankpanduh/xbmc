@@ -8,8 +8,9 @@
 
 #pragma once
 
-#include "utils/EGLUtils.h"
 #include "WinSystemGbm.h"
+#include "utils/EGLUtils.h"
+
 #include <memory>
 
 namespace KODI
@@ -30,6 +31,7 @@ public:
   bool CreateNewWindow(const std::string& name,
                        bool fullScreen,
                        RESOLUTION_INFO& res) override;
+  bool DestroyWindow() override;
 
   EGLDisplay GetEGLDisplay() const;
   EGLSurface GetEGLSurface() const;

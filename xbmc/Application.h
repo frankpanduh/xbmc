@@ -48,7 +48,6 @@ class CFileItemList;
 class CKey;
 class CSeekHandler;
 class CInertialScrollingHandler;
-class DPMSSupport;
 class CSplash;
 class CBookmark;
 class IActionListener;
@@ -150,7 +149,6 @@ public:
 
   bool CreateGUI();
   bool InitWindow(RESOLUTION res = RES_INVALID);
-  bool DestroyWindow();
   void StartServices();
   void StopServices();
 
@@ -319,7 +317,7 @@ public:
 
   bool SwitchToFullScreen(bool force = false);
 
-  bool GetRenderGUI() const { return m_renderGUI; };
+  bool GetRenderGUI() const override { return m_renderGUI; };
 
   bool SetLanguage(const std::string &strLanguage);
   bool LoadLanguage(bool reload);
@@ -423,14 +421,13 @@ protected:
 
   bool m_bInhibitIdleShutdown = false;
 
-  std::unique_ptr<DPMSSupport> m_dpms;
   bool m_dpmsIsActive = false;
   bool m_dpmsIsManual = false;
 
   CFileItemPtr m_itemCurrentFile;
 
   std::string m_prevMedia;
-  ThreadIdentifier m_threadID = 0;       // application thread ID.  Used in applicationMessenger to know where we are firing a thread with delay from.
+  std::thread::id m_threadID;       // application thread ID.  Used in applicationMessenger to know where we are firing a thread with delay from.
   bool m_bInitializing = true;
   bool m_bPlatformDirectories = true;
 

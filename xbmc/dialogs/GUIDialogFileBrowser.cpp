@@ -7,36 +7,37 @@
  */
 
 #include "GUIDialogFileBrowser.h"
-#include "ServiceBroker.h"
-#include "Util.h"
-#include "utils/URIUtils.h"
-#include "utils/StringUtils.h"
-#include "network/GUIDialogNetworkSetup.h"
-#include "GUIDialogMediaSource.h"
-#include "GUIDialogContextMenu.h"
-#include "storage/MediaManager.h"
+
 #include "AutoSwitch.h"
-#include "network/Network.h"
-#include "GUIPassword.h"
-#include "guilib/GUIComponent.h"
-#include "guilib/GUIWindowManager.h"
+#include "FileItem.h"
+#include "GUIDialogContextMenu.h"
+#include "GUIDialogMediaSource.h"
 #include "GUIDialogYesNo.h"
-#include "guilib/GUIKeyboardFactory.h"
+#include "GUIPassword.h"
 #include "GUIUserMessages.h"
+#include "ServiceBroker.h"
+#include "URL.h"
+#include "Util.h"
 #include "filesystem/Directory.h"
 #include "filesystem/File.h"
-#include "FileItem.h"
 #include "filesystem/MultiPathDirectory.h"
+#include "guilib/GUIComponent.h"
+#include "guilib/GUIKeyboardFactory.h"
+#include "guilib/GUIWindowManager.h"
+#include "guilib/LocalizeStrings.h"
+#include "input/Key.h"
+#include "messaging/helpers/DialogOKHelper.h"
+#include "network/GUIDialogNetworkSetup.h"
+#include "network/Network.h"
 #include "profiles/ProfileManager.h"
 #include "settings/MediaSourceSettings.h"
 #include "settings/SettingsComponent.h"
-#include "input/Key.h"
-#include "guilib/LocalizeStrings.h"
-#include "utils/log.h"
-#include "URL.h"
-#include "utils/Variant.h"
+#include "storage/MediaManager.h"
 #include "utils/FileExtensionProvider.h"
-#include "messaging/helpers/DialogOKHelper.h"
+#include "utils/StringUtils.h"
+#include "utils/URIUtils.h"
+#include "utils/Variant.h"
+#include "utils/log.h"
 
 using namespace KODI::MESSAGING;
 using namespace XFILE;
@@ -615,7 +616,7 @@ bool CGUIDialogFileBrowser::ShowAndGetImage(const CFileItemList &items, const VE
   {
     CFileItemPtr item(new CFileItem("image://Browse", false));
     item->SetLabel(g_localizeStrings.Get(20153));
-    item->SetIconImage("DefaultFolder.png");
+    item->SetArt("icon", "DefaultFolder.png");
     browser->m_vecItems->Add(item);
   }
   browser->SetHeading(heading);
@@ -734,7 +735,7 @@ bool CGUIDialogFileBrowser::ShowAndGetFile(const std::string &directory, const s
     CDirectory::GetDirectory(directory,*browser->m_vecItems, "", DIR_FLAG_DEFAULTS);
     CFileItemPtr item(new CFileItem("file://Browse", false));
     item->SetLabel(g_localizeStrings.Get(20153));
-    item->SetIconImage("DefaultFolder.png");
+    item->SetArt("icon", "DefaultFolder.png");
     browser->m_vecItems->Add(item);
     browser->m_singleList = true;
   }

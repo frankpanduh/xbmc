@@ -18,7 +18,6 @@
 #include "PartyModeManager.h"
 #include "PlayListPlayer.h"
 #include "SeekHandler.h"
-#include "settings/AdvancedSettings.h"
 #include "settings/MediaSettings.h"
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
@@ -430,11 +429,14 @@ static int PlayMedia(const std::vector<std::string>& params)
     if ( CGUIWindowVideoBase::ShowResumeMenu(item) == false )
       return false;
   }
-  if (item.m_bIsFolder || item.IsPlayList() || item.IsSmartPlayList())
+  if (item.m_bIsFolder || item.IsPlayList())
   {
     CFileItemList items;
     std::string extensions = CServiceBroker::GetFileExtensionProvider().GetVideoExtensions() + "|" + CServiceBroker::GetFileExtensionProvider().GetMusicExtensions();
-    XFILE::CDirectory::GetDirectory(item.GetPath(), items, extensions, XFILE::DIR_FLAG_DEFAULTS);
+    if (item.IsPlayList())
+      CUtil::GetRecursiveListing(item.GetPath(), items, extensions, XFILE::DIR_FLAG_DEFAULTS);
+    else
+      XFILE::CDirectory::GetDirectory(item.GetPath(), items, extensions, XFILE::DIR_FLAG_DEFAULTS);
 
     if (!items.IsEmpty()) // fall through on non expandable playlist
     {
@@ -472,7 +474,7 @@ static int PlayMedia(const std::vector<std::string>& params)
       return 0;
     }
   }
-  if (item.IsAudio() || item.IsVideo())
+  if ((item.IsAudio() || item.IsVideo()) && !item.IsSmartPlayList())
     CServiceBroker::GetPlaylistPlayer().Play(std::make_shared<CFileItem>(item), "");
   else
     g_application.PlayMedia(item, "", PLAYLIST_NONE);
@@ -552,9 +554,13 @@ static int Seek(const std::vector<std::string>& params)
 ///     | Partymode(video) **     | Toggles video partymode                | none                        |             |
 ///     | Partymode(path to .xsp) | Partymode for *.xsp-file               | Partymode for *.xsp-file    |             |
 ///     | ShowVideoMenu           | Shows the DVD/BR menu if available     | none                        |             |
+///     | FrameAdvance(n) ***     | Advance video by _n_ frames            | none                        | Kodi v18    |
 ///     <br>
 ///     '*' = For these controls\, the PlayerControl built-in function can make use of the 'notify'-parameter. For example: PlayerControl(random\, notify)
+///     <br>
 ///     '**' = If no argument is given for 'partymode'\, the control  will default to music.
+///     <br>
+///     '***' = This only works if the player is paused.
 ///     <br>
 ///     @param[in] control               Control to execute.
 ///     @param[in] param                 "notify" to notify user (optional\, certain controls).

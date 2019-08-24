@@ -8,26 +8,32 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
-#include "addons/AddonEvents.h"
 #include "IListProvider.h"
+#include "addons/AddonEvents.h"
 #include "favourites/FavouritesService.h"
 #include "guilib/GUIStaticItem.h"
-#include "pvr/PVREvent.h"
-#include "utils/Job.h"
-#include "threads/CriticalSection.h"
 #include "interfaces/IAnnouncer.h"
+#include "threads/CriticalSection.h"
+#include "utils/Job.h"
+
+#include <string>
+#include <vector>
 
 class TiXmlElement;
 class CVariant;
+
+namespace PVR
+{
+  enum class PVREvent;
+}
 
 enum class InfoTagType
 {
   VIDEO,
   AUDIO,
   PICTURE,
-  PROGRAM
+  PROGRAM,
+  PVR,
 };
 
 class CDirectoryProvider :
@@ -80,4 +86,5 @@ private:
   void OnAddonEvent(const ADDON::AddonEvent& event);
   void OnPVRManagerEvent(const PVR::PVREvent& event);
   void OnFavouritesEvent(const CFavouritesService::FavouritesUpdated& event);
+  std::string GetTarget(const CFileItem& item) const;
 };

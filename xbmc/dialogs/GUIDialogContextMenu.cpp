@@ -7,33 +7,34 @@
  */
 
 #include "GUIDialogContextMenu.h"
-#include "guilib/GUIComponent.h"
-#include "guilib/GUIButtonControl.h"
-#include "guilib/GUIControlGroupList.h"
+
+#include "FileItem.h"
 #include "GUIDialogFileBrowser.h"
-#include "GUIUserMessages.h"
+#include "GUIDialogMediaSource.h"
+#include "GUIDialogYesNo.h"
 #include "GUIPassword.h"
+#include "GUIUserMessages.h"
 #include "ServiceBroker.h"
+#include "TextureCache.h"
+#include "URL.h"
 #include "Util.h"
-#include "utils/URIUtils.h"
+#include "addons/Scraper.h"
+#include "filesystem/File.h"
+#include "guilib/GUIButtonControl.h"
+#include "guilib/GUIComponent.h"
+#include "guilib/GUIControlGroupList.h"
+#include "guilib/GUIWindowManager.h"
+#include "guilib/LocalizeStrings.h"
+#include "input/Key.h"
+#include "profiles/ProfileManager.h"
+#include "profiles/dialogs/GUIDialogLockSettings.h"
 #include "settings/MediaSourceSettings.h"
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
-#include "GUIDialogMediaSource.h"
-#include "profiles/ProfileManager.h"
-#include "profiles/dialogs/GUIDialogLockSettings.h"
 #include "storage/MediaManager.h"
-#include "guilib/GUIWindowManager.h"
-#include "input/Key.h"
-#include "GUIDialogYesNo.h"
-#include "FileItem.h"
-#include "filesystem/File.h"
-#include "guilib/LocalizeStrings.h"
-#include "TextureCache.h"
-#include "URL.h"
 #include "utils/StringUtils.h"
+#include "utils/URIUtils.h"
 #include "utils/Variant.h"
-#include "addons/Scraper.h"
 
 #define BACKGROUND_IMAGE       999
 #define GROUP_LIST             996
@@ -43,16 +44,16 @@
 
 void CContextButtons::Add(unsigned int button, const std::string &label)
 {
-  for (const_iterator i = begin(); i != end(); ++i)
-    if (i->first == button)
+  for (const auto& i : *this)
+    if (i.first == button)
       return; // already have this button
   push_back(std::pair<unsigned int, std::string>(button, label));
 }
 
 void CContextButtons::Add(unsigned int button, int label)
 {
-  for (const_iterator i = begin(); i != end(); ++i)
-    if (i->first == button)
+  for (const auto& i : *this)
+    if (i.first == button)
       return; // already have added this button
   push_back(std::pair<unsigned int, std::string>(button, g_localizeStrings.Get(label)));
 }
@@ -208,6 +209,19 @@ bool CGUIDialogContextMenu::SourcesMenu(const std::string &strType, const CFileI
 
 void CGUIDialogContextMenu::GetContextButtons(const std::string &type, const CFileItemPtr& item, CContextButtons &buttons)
 {
+  // Add buttons to the ContextMenu that should be visible for both sources and autosourced items
+  if (item && item->IsRemovable())
+  {
+    if (item->IsDVD() || item->IsCDDA())
+    {
+      buttons.Add(CONTEXT_BUTTON_EJECT_DISC, 13391); // Eject / Load
+    }
+    else // Must be HDD
+    {
+      buttons.Add(CONTEXT_BUTTON_EJECT_DRIVE, 13420); // Remove safely
+    }
+  }
+
   // Next, Add buttons to the ContextMenu that should ONLY be visible for sources and not autosourced items
   CMediaSource *share = GetShare(type, item.get());
 
@@ -260,11 +274,27 @@ void CGUIDialogContextMenu::GetContextButtons(const std::string &type, const CFi
 bool CGUIDialogContextMenu::OnContextButton(const std::string &type, const CFileItemPtr& item, CONTEXT_BUTTON button)
 {
   // buttons that are available on both sources and autosourced items
-  if (!item) return false;
+  if (!item)
+    return false;
+
+  switch (button)
+  {
+    case CONTEXT_BUTTON_EJECT_DRIVE:
+      return g_mediaManager.Eject(item->GetPath());
+#ifdef HAS_DVD_DRIVE
+    case CONTEXT_BUTTON_EJECT_DISC:
+      g_mediaManager.ToggleTray(g_mediaManager.TranslateDevicePath(item->GetPath())[0]);
+#endif
+      return true;
+    default:
+      break;
+  }
 
   // the rest of the operations require a valid share
   CMediaSource *share = GetShare(type, item.get());
-  if (!share) return false;
+  if (!share)
+    return false;
+
   switch (button)
   {
   case CONTEXT_BUTTON_EDIT_SOURCE:
@@ -361,7 +391,7 @@ bool CGUIDialogContextMenu::OnContextButton(const std::string &type, const CFile
       }
       // and add a "no thumb" entry as well
       CFileItemPtr nothumb(new CFileItem("thumb://None", false));
-      nothumb->SetIconImage(item->GetIconImage());
+      nothumb->SetArt("icon", item->GetArt("icon"));
       nothumb->SetLabel(g_localizeStrings.Get(20018));
       items.Add(nothumb);
 

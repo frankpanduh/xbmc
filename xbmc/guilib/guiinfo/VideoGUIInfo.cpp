@@ -8,8 +8,6 @@
 
 #include "guilib/guiinfo/VideoGUIInfo.h"
 
-#include "math.h"
-
 #include "Application.h"
 #include "FileItem.h"
 #include "ServiceBroker.h"
@@ -21,18 +19,20 @@
 #include "guilib/LocalizeStrings.h"
 #include "guilib/StereoscopicsManager.h"
 #include "guilib/WindowIDs.h"
+#include "guilib/guiinfo/GUIInfo.h"
+#include "guilib/guiinfo/GUIInfoHelper.h"
+#include "guilib/guiinfo/GUIInfoLabels.h"
 #include "settings/AdvancedSettings.h"
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
+#include "settings/lib/Setting.h"
 #include "utils/StringUtils.h"
 #include "utils/URIUtils.h"
 #include "utils/log.h"
 #include "video/VideoInfoTag.h"
 #include "video/VideoThumbLoader.h"
 
-#include "guilib/guiinfo/GUIInfo.h"
-#include "guilib/guiinfo/GUIInfoHelper.h"
-#include "guilib/guiinfo/GUIInfoLabels.h"
+#include <math.h>
 
 using namespace KODI::GUILIB;
 using namespace KODI::GUILIB::GUIINFO;
@@ -330,18 +330,27 @@ bool CVideoGUIInfo::GetLabel(std::string& value, const CFileItem *item, int cont
         }
         break;
       case LISTITEM_PLOT:
-        if (tag->m_type != MediaTypeTvShow &&
-            tag->m_type != MediaTypeVideoCollection &&
-            tag->GetPlayCount() == 0 &&
-            !CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_VIDEOLIBRARY_SHOWUNWATCHEDPLOTS))
         {
-          value = g_localizeStrings.Get(20370);
+          std::shared_ptr<CSettingList> setting(std::dynamic_pointer_cast<CSettingList>( 
+            CServiceBroker::GetSettingsComponent()->GetSettings()->GetSetting(CSettings::SETTING_VIDEOLIBRARY_SHOWUNWATCHEDPLOTS)));
+          if (tag->m_type != MediaTypeTvShow &&
+              tag->m_type != MediaTypeVideoCollection &&
+              tag->GetPlayCount() == 0 &&
+              setting &&
+              (
+               (tag->m_type == MediaTypeMovie && (!setting->FindIntInList(CSettings::VIDEOLIBRARY_PLOTS_SHOW_UNWATCHED_MOVIES))) ||  
+               (tag->m_type == MediaTypeEpisode && (!setting->FindIntInList(CSettings::VIDEOLIBRARY_PLOTS_SHOW_UNWATCHED_TVSHOWEPISODES)))
+              )
+             ) 
+          {
+            value = g_localizeStrings.Get(20370);
+          }
+          else
+          {
+            value = tag->m_strPlot;
+          }
+          return true;
         }
-        else
-        {
-          value = tag->m_strPlot;
-        }
-        return true;
       case LISTITEM_STATUS:
         value = tag->m_strStatus;
         return true;

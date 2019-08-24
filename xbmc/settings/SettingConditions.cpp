@@ -12,7 +12,6 @@
 #include "Util.h"
 #include "addons/AddonManager.h"
 #include "addons/binary-addons/BinaryAddonManager.h"
-#include "addons/BinaryAddonCache.h"
 #include "addons/Skin.h"
 #if defined(TARGET_ANDROID)
 #include "platform/android/activity/AndroidFeatures.h"
@@ -25,18 +24,9 @@
 #endif
 #include "peripherals/Peripherals.h"
 #include "profiles/ProfileManager.h"
-#include "pvr/PVRGUIActions.h"
-#include "pvr/PVRManager.h"
-#include "pvr/PVRSettings.h"
 #include "settings/SettingAddon.h"
 #include "settings/SettingsComponent.h"
-#if defined(HAS_LIBAMCODEC)
-#include "utils/AMLUtils.h"
-#endif // defined(HAS_LIBAMCODEC)
 #include "utils/StringUtils.h"
-#if defined(TARGET_DARWIN_OSX)
-#include "platform/darwin/DarwinUtils.h"
-#endif// defined(TARGET_DARWIN_OSX)
 #include "windowing/WinSystem.h"
 
 bool AddonHasSettings(const std::string &condition, const std::string &value, SettingConstPtr setting, void *data)
@@ -61,11 +51,6 @@ bool AddonHasSettings(const std::string &condition, const std::string &value, Se
 bool CheckMasterLock(const std::string &condition, const std::string &value, SettingConstPtr setting, void *data)
 {
   return g_passwordManager.IsMasterLockUnlocked(StringUtils::EqualsNoCase(value, "true"));
-}
-
-bool CheckPVRParentalPin(const std::string &condition, const std::string &value, SettingConstPtr setting, void *data)
-{
-  return CServiceBroker::GetPVRManager().GUIActions()->CheckParentalPIN() == PVR::ParentalCheckResult::SUCCESS;
 }
 
 bool HasPeripherals(const std::string &condition, const std::string &value, SettingConstPtr setting, void *data)
@@ -299,9 +284,6 @@ void CSettingConditions::Initialize()
 #ifdef HAS_ZEROCONF
   m_simpleConditions.insert("has_zeroconf");
 #endif
-#ifdef TARGET_RASPBERRY_PI
-  m_simpleConditions.insert("has_omxplayer");
-#endif
 #ifdef HAVE_LIBVA
   m_simpleConditions.insert("have_libva");
 #endif
@@ -319,10 +301,6 @@ void CSettingConditions::Initialize()
 #endif
 #ifdef TARGET_DARWIN_IOS
   m_simpleConditions.insert("have_ios");
-#endif
-#ifdef HAS_LIBAMCODEC
-  if (aml_present())
-    m_simpleConditions.insert("have_amcodec");
 #endif
 #if defined(TARGET_WINDOWS)
   m_simpleConditions.insert("has_dx");
@@ -349,7 +327,6 @@ void CSettingConditions::Initialize()
   // add complex conditions
   m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("addonhassettings",              AddonHasSettings));
   m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("checkmasterlock",               CheckMasterLock));
-  m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("checkpvrparentalpin",           CheckPVRParentalPin));
   m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("hasperipherals",                HasPeripherals));
   m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("hasperipherallibraries",        HasPeripheralLibraries));
   m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("hasrumblefeature",              HasRumbleFeature));
@@ -376,7 +353,6 @@ void CSettingConditions::Initialize()
   m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("gte",                           GreaterThanOrEqual));
   m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("lt",                            LessThan));
   m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("lte",                           LessThanOrEqual));
-  m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("pvrsettingvisible",             PVR::CPVRSettings::IsSettingVisible));
 }
 
 void CSettingConditions::Deinitialize()

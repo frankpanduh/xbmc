@@ -165,7 +165,8 @@ bool CGUIControllerWindow::OnMessage(CGUIMessage& message)
 
       if (controlId == CONTROL_CONTROLLER_LIST)
       {
-        if (m_controllerList && m_controllerList->Refresh())
+        const std::string controllerId = message.GetStringParam();
+        if (m_controllerList && m_controllerList->Refresh(controllerId))
         {
           CGUIDialog::OnMessage(message);
           bHandled = true;
@@ -186,6 +187,22 @@ bool CGUIControllerWindow::OnMessage(CGUIMessage& message)
 void CGUIControllerWindow::OnEvent(const ADDON::CRepositoryUpdater::RepositoryUpdated& event)
 {
   UpdateButtons();
+}
+
+void CGUIControllerWindow::OnEvent(const ADDON::AddonEvent& event)
+{
+  using namespace ADDON;
+
+  if (typeid(event) == typeid(AddonEvents::Enabled) || // also called on install,
+      typeid(event) == typeid(AddonEvents::Disabled) || // not called on uninstall
+      typeid(event) == typeid(AddonEvents::UnInstalled) ||
+      typeid(event) == typeid(AddonEvents::ReInstalled))
+  {
+    if (CServiceBroker::GetAddonMgr().HasType(event.id, ADDON_GAME_CONTROLLER))
+    {
+      UpdateButtons();
+    }
+  }
 }
 
 void CGUIControllerWindow::OnInitWindow(void)
@@ -233,10 +250,17 @@ void CGUIControllerWindow::OnInitWindow(void)
   CServiceBroker::GetPeripherals().EnableButtonMapping();
 
   UpdateButtons();
+
+  // subscribe to events
+  CServiceBroker::GetRepositoryUpdater().Events().Subscribe(this, &CGUIControllerWindow::OnEvent);
+  CServiceBroker::GetAddonMgr().Events().Subscribe(this, &CGUIControllerWindow::OnEvent);
 }
 
 void CGUIControllerWindow::OnDeinitWindow(int nextWindowID)
 {
+  CServiceBroker::GetRepositoryUpdater().Events().Unsubscribe(this);
+  CServiceBroker::GetAddonMgr().Events().Unsubscribe(this);
+
   if (m_controllerList)
   {
     m_controllerList->Deinitialize();

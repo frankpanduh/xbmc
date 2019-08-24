@@ -25,13 +25,13 @@
 #include "utils/MathUtils.h"
 #include "cores/VideoPlayer/DVDCodecs/Video/MMALCodec.h"
 #include "cores/VideoPlayer/DVDCodecs/Video/MMALFFmpeg.h"
-#include "xbmc/Application.h"
+#include "Application.h"
 #include "platform/linux/RBP.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderFactory.h"
 #include "cores/VideoPlayer/Interface/Addon/TimingConstants.h"
 
 extern "C" {
-#include "libavutil/imgutils.h"
+#include <libavutil/imgutils.h>
 }
 
 #define VERBOSE 0
@@ -172,11 +172,12 @@ CMMALPool::~CMMALPool()
       CLog::Log(LOGERROR, "%s::%s Failed to disable component %s (status=%x %s)", CLASSNAME, __func__, m_component->name, status, mmal_status_to_string(status));
   }
 
+  mmal_port_pool_destroy(port, m_mmal_pool);
+
   if (m_component)
     mmal_component_destroy(m_component);
   m_component = nullptr;
 
-  mmal_port_pool_destroy(port, m_mmal_pool);
   m_mmal_pool = nullptr;
   for (auto buf : m_all)
   {

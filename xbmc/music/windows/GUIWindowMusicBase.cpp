@@ -37,13 +37,11 @@
 #include "dialogs/GUIDialogYesNo.h"
 #include "dialogs/GUIDialogProgress.h"
 #include "FileItem.h"
-#include "filesystem/File.h"
 #include "messaging/helpers/DialogHelper.h"
 #include "messaging/helpers/DialogOKHelper.h"
 #include "profiles/ProfileManager.h"
 #include "storage/MediaManager.h"
 #include "settings/AdvancedSettings.h"
-#include "settings/MediaSettings.h"
 #include "settings/MediaSourceSettings.h"
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
@@ -57,13 +55,14 @@
 #include "guilib/guiinfo/GUIInfoLabels.h"
 #include "cores/IPlayer.h"
 #include "cores/playercorefactory/PlayerCoreFactory.h"
-#include "CueDocument.h"
 #include "Autorun.h"
 #include "video/dialogs/GUIDialogVideoInfo.h"
 
 #ifdef TARGET_POSIX
-#include "platform/linux/XTimeUtils.h"
+#include "platform/posix/XTimeUtils.h"
 #endif
+
+#include <algorithm>
 
 using namespace XFILE;
 using namespace MUSICDATABASEDIRECTORY;
@@ -118,7 +117,8 @@ bool CGUIWindowMusicBase::OnBack(int actionID)
     Other Controls:
     - The container controls\n
      Have the following actions in message them clicking on them.
-     - #ACTION_QUEUE_ITEM - add selected item to playlist
+     - #ACTION_QUEUE_ITEM - add selected item to end of playlist
+     - #ACTION_QUEUE_ITEM_NEXT - add selected item to next pos in playlist
      - #ACTION_SHOW_INFO - retrieve album info from the internet
      - #ACTION_SELECT_ITEM - Item has been selected. Overwrite OnClick() to react on it
  */
@@ -192,6 +192,10 @@ bool CGUIWindowMusicBase::OnMessage(CGUIMessage& message)
         if (iAction == ACTION_QUEUE_ITEM || iAction == ACTION_MOUSE_MIDDLE_CLICK)
         {
           OnQueueItem(iItem);
+        }
+        else if (iAction == ACTION_QUEUE_ITEM_NEXT)
+        {
+          OnQueueItem(iItem, true);
         }
         else if (iAction == ACTION_SHOW_INFO)
         {
@@ -350,7 +354,7 @@ void CGUIWindowMusicBase::RetrieveMusicInfo()
 
 /// \brief Add selected list/thumb control item to playlist and start playing
 /// \param iItem Selected Item in list/thumb control
-void CGUIWindowMusicBase::OnQueueItem(int iItem)
+void CGUIWindowMusicBase::OnQueueItem(int iItem, bool first)
 {
   // Determine the proper list to queue this element
   int playlist = CServiceBroker::GetPlaylistPlayer().GetCurrentPlaylist();
@@ -389,7 +393,10 @@ void CGUIWindowMusicBase::OnQueueItem(int iItem)
     return;
   }
 
-  CServiceBroker::GetPlaylistPlayer().Add(playlist, queuedItems);
+  if (first && g_application.GetAppPlayer().IsPlaying())
+    CServiceBroker::GetPlaylistPlayer().Insert(playlist, queuedItems, CServiceBroker::GetPlaylistPlayer().GetCurrentSong()+1);
+  else
+    CServiceBroker::GetPlaylistPlayer().Add(playlist, queuedItems);
   if (CServiceBroker::GetPlaylistPlayer().GetPlaylist(playlist).size() && !g_application.GetAppPlayer().IsPlaying())
   {
     if (m_guiState.get())
@@ -469,7 +476,7 @@ void CGUIWindowMusicBase::AddItemToPlayList(const CFileItemPtr &pItem, CFileItem
         return;
       }
     }
-    else if(pItem->IsInternetStream())
+    else if(pItem->IsInternetStream() && !pItem->IsMusicDb())
     { // just queue the internet stream, it will be expanded on play
       queuedItems.Add(pItem);
     }
@@ -522,6 +529,7 @@ void CGUIWindowMusicBase::GetContextButtons(int itemNumber, CContextButtons &but
       if (item->CanQueue() && !item->IsAddonsPath() && !item->IsScript())
       {
         buttons.Add(CONTEXT_BUTTON_QUEUE_ITEM, 13347); //queue
+        buttons.Add(CONTEXT_BUTTON_PLAY_NEXT, 10008); //play next
 
         // allow a folder to be ad-hoc queued and played by the default player
         if (item->m_bIsFolder || (item->IsPlayList() &&
@@ -542,12 +550,6 @@ void CGUIWindowMusicBase::GetContextButtons(int itemNumber, CContextButtons &but
         if (item->IsSmartPlayList())
         {
             buttons.Add(CONTEXT_BUTTON_PLAY_PARTYMODE, 15216); // Play in Partymode
-        }
-        if (item->IsAudioBook())
-        {
-          int bookmark;
-          if (m_musicdatabase.GetResumeBookmarkForAudioBook(item->GetPath(), bookmark) && bookmark > 0)
-            buttons.Add(CONTEXT_BUTTON_RESUME_ITEM, 39016);
         }
 
         if (item->IsSmartPlayList() || m_vecItems->IsSmartPlayList())
@@ -611,6 +613,10 @@ bool CGUIWindowMusicBase::OnContextButton(int itemNumber, CONTEXT_BUTTON button)
     OnQueueItem(itemNumber);
     return true;
 
+  case CONTEXT_BUTTON_PLAY_NEXT:
+    OnQueueItem(itemNumber, true);
+    return true;
+
   case CONTEXT_BUTTON_INFO:
     OnItemInfo(itemNumber);
     return true;
@@ -667,26 +673,17 @@ bool CGUIWindowMusicBase::OnContextButton(int itemNumber, CONTEXT_BUTTON button)
     return true;
 
   case CONTEXT_BUTTON_SCAN:
-    OnScan(itemNumber, true);
+    // Check if scanning already and inform user
+    if (g_application.IsMusicScanning())
+      HELPERS::ShowOKDialogText(CVariant{ 189 }, CVariant{ 14057 });
+    else
+      OnScan(itemNumber, true);
     return true;
 
   case CONTEXT_BUTTON_CDDB:
     if (m_musicdatabase.LookupCDDBInfo(true))
       Refresh();
     return true;
-
-  case CONTEXT_BUTTON_RESUME_ITEM: //audiobooks
-    {
-      Update(item->GetPath());
-      int bookmark;
-      m_musicdatabase.GetResumeBookmarkForAudioBook(item->GetPath(), bookmark);
-      int i=0;
-      while (i < m_vecItems->Size() && bookmark > m_vecItems->Get(i)->m_lEndOffset)
-        ++i;
-      CFileItem resItem(*m_vecItems->Get(i));
-      resItem.SetProperty("StartPercent", ((double)bookmark-resItem.m_lStartOffset)/(resItem.m_lEndOffset-resItem.m_lStartOffset)*100);
-      g_application.PlayFile(resItem, "", false);
-    }
 
   default:
     break;
@@ -836,7 +833,7 @@ bool CGUIWindowMusicBase::OnPlayMedia(int iItem, const std::string &player)
   {
     CPlayList playlistTemp;
     playlistTemp.Add(pItem);
-    g_partyModeManager.AddUserSongs(playlistTemp, true);
+    g_partyModeManager.AddUserSongs(playlistTemp, !CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_MUSICPLAYER_QUEUEBYDEFAULT));
     return true;
   }
   else if (!pItem->IsPlayList() && !pItem->IsInternetStream())
@@ -961,13 +958,13 @@ bool CGUIWindowMusicBase::GetDirectory(const std::string &strDirectory, CFileIte
       CFileItemPtr newPlaylist(new CFileItem(profileManager->GetUserDataItem("PartyMode.xsp"),false));
       newPlaylist->SetLabel(g_localizeStrings.Get(16035));
       newPlaylist->SetLabelPreformatted(true);
-      newPlaylist->SetIconImage("DefaultPartyMode.png");
+      newPlaylist->SetArt("icon", "DefaultPartyMode.png");
       newPlaylist->m_bIsFolder = true;
       items.Add(newPlaylist);
 
       newPlaylist.reset(new CFileItem("newplaylist://", false));
       newPlaylist->SetLabel(g_localizeStrings.Get(525));
-      newPlaylist->SetIconImage("DefaultAddSource.png");
+      newPlaylist->SetArt("icon", "DefaultAddSource.png");
       newPlaylist->SetLabelPreformatted(true);
       newPlaylist->SetSpecialSort(SortSpecialOnBottom);
       newPlaylist->SetCanQueue(false);
@@ -975,7 +972,7 @@ bool CGUIWindowMusicBase::GetDirectory(const std::string &strDirectory, CFileIte
 
       newPlaylist.reset(new CFileItem("newsmartplaylist://music", false));
       newPlaylist->SetLabel(g_localizeStrings.Get(21437));
-      newPlaylist->SetIconImage("DefaultAddSource.png");
+      newPlaylist->SetArt("icon", "DefaultAddSource.png");
       newPlaylist->SetLabelPreformatted(true);
       newPlaylist->SetSpecialSort(SortSpecialOnBottom);
       newPlaylist->SetCanQueue(false);
@@ -1008,6 +1005,45 @@ bool CGUIWindowMusicBase::CheckFilterAdvanced(CFileItemList &items) const
 bool CGUIWindowMusicBase::CanContainFilter(const std::string &strDirectory) const
 {
   return URIUtils::IsProtocol(strDirectory, "musicdb");
+}
+
+bool CGUIWindowMusicBase::OnSelect(int iItem)
+{
+  auto item = m_vecItems->Get(iItem);
+  if (item->IsAudioBook())
+  {
+    int bookmark;
+    if (m_musicdatabase.GetResumeBookmarkForAudioBook(*item, bookmark) && bookmark > 0)
+    {
+      // find which chapter the bookmark belongs to
+      auto itemIt = std::find_if(
+        m_vecItems->cbegin(),
+        m_vecItems->cend(),
+        [&](const CFileItemPtr& item) { return bookmark < item->m_lEndOffset; }
+      );
+
+      if (itemIt != m_vecItems->cend())
+      {
+        // ask the user if they want to play or resume
+        CContextButtons choices;
+        choices.Add(MUSIC_SELECT_ACTION_PLAY, 208); // 208 = Play
+        choices.Add(MUSIC_SELECT_ACTION_RESUME, StringUtils::Format(g_localizeStrings.Get(12022), // 12022 = Resume from ...
+          (*itemIt)->GetMusicInfoTag()->GetTitle().c_str()
+        ));
+
+        auto choice = CGUIDialogContextMenu::Show(choices);
+        if (choice == MUSIC_SELECT_ACTION_RESUME)
+        {
+          (*itemIt)->SetProperty("audiobook_bookmark", bookmark);
+          return CGUIMediaWindow::OnSelect(itemIt - m_vecItems->cbegin());
+        }
+        else if (choice < 0)
+          return true;
+      }
+    }
+  }
+
+  return CGUIMediaWindow::OnSelect(iItem);
 }
 
 void CGUIWindowMusicBase::OnInitWindow()

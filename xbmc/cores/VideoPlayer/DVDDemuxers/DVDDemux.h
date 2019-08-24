@@ -28,7 +28,7 @@ namespace ADDON {
 #endif
 
 extern "C" {
-#include "libavcodec/avcodec.h"
+#include <libavcodec/avcodec.h>
 }
 
 #ifndef __GNUC__
@@ -276,6 +276,11 @@ public:
    * speeds of playback
    */
   virtual void SetSpeed(int iSpeed) { }
+
+  /*
+   * Let demuxer know if we want to fill demux queue
+   */
+  virtual void FillBuffer(bool mode) { }
 
   /*
    * returns the total time in msec

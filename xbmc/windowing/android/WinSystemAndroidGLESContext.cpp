@@ -6,10 +6,12 @@
  *  See LICENSES/README.md for more information.
  */
 
-#include "VideoSyncAndroid.h"
 #include "WinSystemAndroidGLESContext.h"
-#include "utils/log.h"
+
+#include "VideoSyncAndroid.h"
 #include "threads/SingleLock.h"
+#include "utils/log.h"
+
 #include "platform/android/activity/XBMCApp.h"
 
 std::unique_ptr<CWinSystemBase> CWinSystemBase::CreateWinSystem()
@@ -25,9 +27,17 @@ bool CWinSystemAndroidGLESContext::InitWindowSystem()
     return false;
   }
 
-  if (!m_pGLContext.CreateDisplay(m_nativeDisplay,
-                                  EGL_OPENGL_ES2_BIT,
-                                  EGL_OPENGL_ES_API))
+  if (!m_pGLContext.CreateDisplay(m_nativeDisplay))
+  {
+    return false;
+  }
+
+  if (!m_pGLContext.InitializeDisplay(EGL_OPENGL_ES_API))
+  {
+    return false;
+  }
+
+  if (!m_pGLContext.ChooseConfig(EGL_OPENGL_ES2_BIT))
   {
     return false;
   }
@@ -88,14 +98,22 @@ void CWinSystemAndroidGLESContext::SetVSyncImpl(bool enable)
 
 void CWinSystemAndroidGLESContext::PresentRenderImpl(bool rendered)
 {
+  if (!m_nativeWindow)
+  {
+    usleep(10000);
+    return;
+  }
+
   // Ignore EGL_BAD_SURFACE: It seems to happen during/after mode changes, but
   // we can't actually do anything about it
-  if (rendered && !m_pGLContext.TrySwapBuffers() && eglGetError() != EGL_BAD_SURFACE)
-  {
+  if (rendered && !m_pGLContext.TrySwapBuffers())
     CEGLUtils::LogError("eglSwapBuffers failed");
-    throw std::runtime_error("eglSwapBuffers failed");
-  }
   CXBMCApp::get()->WaitVSync(1000);
+}
+
+float CWinSystemAndroidGLESContext::GetFrameLatencyAdjustment()
+{
+  return CXBMCApp::GetFrameLatencyMs();
 }
 
 EGLDisplay CWinSystemAndroidGLESContext::GetEGLDisplay() const

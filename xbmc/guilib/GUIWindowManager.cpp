@@ -16,7 +16,6 @@
 #include "GUIInfoManager.h"
 #include "threads/SingleLock.h"
 #include "utils/URIUtils.h"
-#include "SeekHandler.h"
 #include "settings/AdvancedSettings.h"
 #include "settings/SettingsComponent.h"
 #include "addons/Skin.h"
@@ -41,12 +40,6 @@
 #include "video/dialogs/GUIDialogVideoInfo.h"
 #include "video/windows/GUIWindowVideoNav.h"
 #include "profiles/windows/GUIWindowSettingsProfile.h"
-#ifdef HAS_GL
-#include "rendering/gl/GUIWindowTestPatternGL.h"
-#endif
-#ifdef HAS_DX
-#include "rendering/dx/GUIWindowTestPatternDX.h"
-#endif
 #include "settings/windows/GUIWindowSettingsScreenCalibration.h"
 #include "programs/GUIWindowPrograms.h"
 #include "pictures/GUIWindowPictures.h"
@@ -107,9 +100,6 @@
 #include "pictures/GUIDialogPictureInfo.h"
 #include "addons/settings/GUIDialogAddonSettings.h"
 #include "addons/GUIDialogAddonInfo.h"
-#ifdef HAS_LINUX_NETWORK
-#include "network/GUIDialogAccessPoints.h"
-#endif
 
 /* PVR related include Files */
 #include "pvr/PVRManager.h"
@@ -185,12 +175,6 @@ void CGUIWindowManager::CreateWindows()
   Add(new CGUIWindowFileManager);
   Add(new CGUIWindowSettings);
   Add(new CGUIWindowSystemInfo);
-#ifdef HAS_GL
-  Add(new CGUIWindowTestPatternGL);
-#endif
-#ifdef HAS_DX
-  Add(new CGUIWindowTestPatternDX);
-#endif
   Add(new CGUIWindowSettingsScreenCalibration);
   Add(new CGUIWindowSettingsCategory);
   Add(new CGUIWindowVideoNav);
@@ -240,9 +224,6 @@ void CGUIWindowManager::CreateWindows()
   Add(new CGUIDialogPictureInfo);
   Add(new CGUIDialogAddonInfo);
   Add(new CGUIDialogAddonSettings);
-#ifdef HAS_LINUX_NETWORK
-  Add(new CGUIDialogAccessPoints);
-#endif
 
   Add(new CGUIDialogLockSettings);
 
@@ -368,7 +349,6 @@ bool CGUIWindowManager::DestroyWindows()
     DestroyWindow(WINDOW_DIALOG_PICTURE_INFO);
     DestroyWindow(WINDOW_DIALOG_ADDON_INFO);
     DestroyWindow(WINDOW_DIALOG_ADDON_SETTINGS);
-    DestroyWindow(WINDOW_DIALOG_ACCESS_POINTS);
     DestroyWindow(WINDOW_DIALOG_SLIDER);
     DestroyWindow(WINDOW_DIALOG_MEDIA_FILTER);
     DestroyWindow(WINDOW_DIALOG_SUBTITLES);
@@ -408,7 +388,6 @@ bool CGUIWindowManager::DestroyWindows()
     DestroyWindow(WINDOW_VISUALISATION);
     DestroyWindow(WINDOW_SETTINGS_MENU);
     DestroyWindow(WINDOW_SETTINGS_PROFILES);
-    DestroyWindow(WINDOW_TEST_PATTERN);
     DestroyWindow(WINDOW_SCREEN_CALIBRATION);
     DestroyWindow(WINDOW_SYSTEM_INFORMATION);
     DestroyWindow(WINDOW_SCREENSAVER);
@@ -1116,8 +1095,8 @@ void CGUIWindowManager::Process(unsigned int currentTime)
       pWindow->DoProcess(currentTime, m_dirtyregions);
   }
 
-  for (CDirtyRegionList::iterator itr = m_dirtyregions.begin(); itr != m_dirtyregions.end(); ++itr)
-    m_tracker.MarkDirtyRegion(*itr);
+  for (auto& itr : m_dirtyregions)
+    m_tracker.MarkDirtyRegion(itr);
 }
 
 void CGUIWindowManager::MarkDirty()
@@ -1202,12 +1181,12 @@ bool CGUIWindowManager::Render()
   }
   else
   {
-    for (CDirtyRegionList::const_iterator i = dirtyRegions.begin(); i != dirtyRegions.end(); ++i)
+    for (const auto& i : dirtyRegions)
     {
-      if (i->IsEmpty())
+      if (i.IsEmpty())
         continue;
 
-      CServiceBroker::GetWinSystem()->GetGfxContext().SetScissors(*i);
+      CServiceBroker::GetWinSystem()->GetGfxContext().SetScissors(i);
       RenderPass();
       hasRendered = true;
     }
@@ -1218,10 +1197,10 @@ bool CGUIWindowManager::Render()
   {
     CServiceBroker::GetWinSystem()->GetGfxContext().SetRenderingResolution(CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(), false);
     const CDirtyRegionList &markedRegions  = m_tracker.GetMarkedRegions();
-    for (CDirtyRegionList::const_iterator i = markedRegions.begin(); i != markedRegions.end(); ++i)
-      CGUITexture::DrawQuad(*i, 0x0fff0000);
-    for (CDirtyRegionList::const_iterator i = dirtyRegions.begin(); i != dirtyRegions.end(); ++i)
-      CGUITexture::DrawQuad(*i, 0x4c00ff00);
+    for (const auto& i : markedRegions)
+      CGUITexture::DrawQuad(i, 0x0fff0000);
+    for (const auto& i : dirtyRegions)
+      CGUITexture::DrawQuad(i, 0x4c00ff00);
   }
 
   return hasRendered;
@@ -1303,8 +1282,11 @@ CGUIWindow* CGUIWindowManager::GetWindow(int id) const
 
 bool CGUIWindowManager::ProcessRenderLoop(bool renderOnly)
 {
+  bool renderGui = true;
+
   if (g_application.IsCurrentThread() && m_pCallback)
   {
+    renderGui = m_pCallback->GetRenderGUI();
     m_iNested++;
     if (!renderOnly)
       m_pCallback->Process();
@@ -1312,7 +1294,7 @@ bool CGUIWindowManager::ProcessRenderLoop(bool renderOnly)
     m_pCallback->Render();
     m_iNested--;
   }
-  if (g_application.m_bStop)
+  if (g_application.m_bStop || !renderGui)
     return false;
   else
     return true;
@@ -1684,8 +1666,10 @@ void CGUIWindowManager::CloseWindowSync(CGUIWindow *window, int nextWindowID /*=
   }
 
   window->Close(false, nextWindowID);
-  while (window->IsAnimating(ANIM_TYPE_WINDOW_CLOSE))
-    ProcessRenderLoop(true);
+
+  bool renderLoopProcessed = true;
+  while (window->IsAnimating(ANIM_TYPE_WINDOW_CLOSE) && renderLoopProcessed)
+    renderLoopProcessed = ProcessRenderLoop(true);
 }
 
 #ifdef _DEBUG

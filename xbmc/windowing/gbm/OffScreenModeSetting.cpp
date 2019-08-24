@@ -7,6 +7,7 @@
  */
 
 #include "OffScreenModeSetting.h"
+
 #include "utils/log.h"
 
 using namespace KODI::WINDOWING::GBM;
@@ -20,12 +21,6 @@ bool COffScreenModeSetting::InitDrm()
 
   CLog::Log(LOGDEBUG, "COffScreenModeSetting::%s - initialized offscreen DRM", __FUNCTION__);
   return true;
-}
-
-void COffScreenModeSetting::DestroyDrm()
-{
-  close(m_fd);
-  m_fd = -1;
 }
 
 std::vector<RESOLUTION_INFO> COffScreenModeSetting::GetModes()

@@ -40,21 +40,21 @@
 //
 ////////////////////////////////////////////////////////////////////////////////////
 
-#include <cstdlib>
-
 #include "CueDocument.h"
-#include "ServiceBroker.h"
-#include "utils/log.h"
-#include "utils/URIUtils.h"
-#include "utils/StringUtils.h"
-#include "utils/CharsetConverter.h"
-#include "filesystem/File.h"
-#include "filesystem/Directory.h"
+
 #include "FileItem.h"
+#include "ServiceBroker.h"
+#include "Util.h"
+#include "filesystem/Directory.h"
+#include "filesystem/File.h"
 #include "settings/AdvancedSettings.h"
 #include "settings/SettingsComponent.h"
-#include "Util.h"
+#include "utils/CharsetConverter.h"
+#include "utils/StringUtils.h"
+#include "utils/URIUtils.h"
+#include "utils/log.h"
 
+#include <cstdlib>
 #include <set>
 
 using namespace XFILE;
@@ -135,7 +135,9 @@ public:
         line.push_back(ch);
       }
     }
-    return false;
+
+    StringUtils::Trim(line);
+    return !line.empty();
   }
   bool ready() const override
   {
@@ -282,10 +284,8 @@ bool CCueDocument::Parse(CueReader& reader, const std::string& strFile)
   int numberFiles = -1;
 
   // Run through the .CUE file and extract the tracks...
-  while (true)
+  while (reader.ReadLine(strLine))
   {
-    if (!reader.ReadLine(strLine))
-      break;
     if (StringUtils::StartsWithNoCase(strLine, "INDEX 01"))
     {
       if (bCurrentFileChanged)

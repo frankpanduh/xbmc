@@ -13,6 +13,7 @@
 #include "filesystem/SpecialProtocol.h"
 #include "filesystem/StackDirectory.h"
 #include "network/DNSNameCache.h"
+#include "pvr/channels/PVRChannelsPath.h"
 #include "settings/AdvancedSettings.h"
 #include "URL.h"
 #include "utils/FileExtensionProvider.h"
@@ -29,6 +30,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+using namespace PVR;
 using namespace XFILE;
 
 const CAdvancedSettings* URIUtils::m_advancedSettings = nullptr;
@@ -275,12 +277,12 @@ void URIUtils::GetCommonPath(std::string& strParent, const std::string& strPath)
 bool URIUtils::HasParentInHostname(const CURL& url)
 {
   return url.IsProtocol("zip")
-      || url.IsProtocol("rar")
-      || url.IsProtocol("archive")
       || url.IsProtocol("apk")
       || url.IsProtocol("bluray")
       || url.IsProtocol("udf")
-      || url.IsProtocol("xbt");
+      || url.IsProtocol("xbt")
+      || (CServiceBroker::IsBinaryAddonCacheUp() &&
+          CServiceBroker::GetFileExtensionProvider().EncodedHostName(url.GetProtocol()));
 }
 
 bool URIUtils::HasEncodedHostname(const CURL& url)
@@ -323,15 +325,15 @@ bool URIUtils::GetParentPath(const std::string& strPath, std::string& strParent)
     CFileItemList items;
     if (!dir.GetDirectory(url, items))
       return false;
-    items[0]->m_strDVDLabel = GetDirectory(items[0]->GetPath());
-    if (IsProtocol(items[0]->m_strDVDLabel, "rar") || IsProtocol(items[0]->m_strDVDLabel, "zip"))
-      GetParentPath(items[0]->m_strDVDLabel, strParent);
+    CURL url2(GetDirectory(items[0]->GetPath()));
+    if (HasParentInHostname(url2))
+      GetParentPath(url2.Get(), strParent);
     else
-      strParent = items[0]->m_strDVDLabel;
+      strParent = url2.Get();
     for( int i=1;i<items.Size();++i)
     {
       items[i]->m_strDVDLabel = GetDirectory(items[i]->GetPath());
-      if (IsProtocol(items[0]->m_strDVDLabel, "rar") || IsProtocol(items[0]->m_strDVDLabel, "zip"))
+      if (HasParentInHostname(url2))
         items[i]->SetPath(GetParentPath(items[i]->m_strDVDLabel));
       else
         items[i]->SetPath(items[i]->m_strDVDLabel);
@@ -597,6 +599,18 @@ bool URIUtils::IsRemote(const std::string& strFile)
     return false;
 
   if (IsSourcesPath(strFile))
+    return false;
+  
+  if (IsVideoDb(strFile) || IsMusicDb(strFile))
+    return false;
+  
+  if (IsLibraryFolder(strFile))
+    return false;
+  
+  if (IsPlugin(strFile))
+    return false;
+  
+  if (IsAndroidApp(strFile))
     return false;
 
   if (!url.IsLocal())
@@ -939,12 +953,28 @@ bool URIUtils::IsTCP(const std::string& strFile)
   return IsProtocol(strFile, "tcp");
 }
 
+bool URIUtils::IsPVR(const std::string& strFile)
+{
+  if (IsStack(strFile))
+    return IsPVR(CStackDirectory::GetFirstStackedFile(strFile));
+
+  return IsProtocol(strFile, "pvr");
+}
+
 bool URIUtils::IsPVRChannel(const std::string& strFile)
 {
   if (IsStack(strFile))
     return IsPVRChannel(CStackDirectory::GetFirstStackedFile(strFile));
 
-  return StringUtils::StartsWithNoCase(strFile, "pvr://channels");
+  return IsProtocol(strFile, "pvr") && CPVRChannelsPath(strFile).IsChannel();
+}
+
+bool URIUtils::IsPVRChannelGroup(const std::string& strFile)
+{
+  if (IsStack(strFile))
+    return IsPVRChannelGroup(CStackDirectory::GetFirstStackedFile(strFile));
+
+  return IsProtocol(strFile, "pvr") && CPVRChannelsPath(strFile).IsChannelGroup();
 }
 
 bool URIUtils::IsPVRGuideItem(const std::string& strFile)
@@ -1017,7 +1047,8 @@ bool URIUtils::IsLiveTV(const std::string& strFile)
   std::string strFileWithoutSlash(strFile);
   RemoveSlashAtEnd(strFileWithoutSlash);
 
-  if (StringUtils::EndsWithNoCase(strFileWithoutSlash, ".pvr") && !StringUtils::StartsWith(strFileWithoutSlash, "pvr://recordings"))
+  if (StringUtils::EndsWithNoCase(strFileWithoutSlash, ".pvr") &&
+      !StringUtils::StartsWith(strFileWithoutSlash, "pvr://recordings"))
     return true;
 
   return false;

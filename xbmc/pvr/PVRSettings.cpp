@@ -10,28 +10,54 @@
 
 #include "ServiceBroker.h"
 #include "guilib/LocalizeStrings.h"
+#include "pvr/PVRGUIActions.h"
+#include "pvr/PVRManager.h"
+#include "pvr/addons/PVRClients.h"
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
 #include "settings/lib/SettingsManager.h"
 #include "utils/StringUtils.h"
 #include "utils/log.h"
 
-#include "pvr/PVRManager.h"
-#include "pvr/addons/PVRClients.h"
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
 
 using namespace PVR;
+
+unsigned int CPVRSettings::m_iInstances = 0;
 
 CPVRSettings::CPVRSettings(const std::set<std::string> &settingNames)
 {
   Init(settingNames);
+
   const std::shared_ptr<CSettings> settings = CServiceBroker::GetSettingsComponent()->GetSettings();
   settings->GetSettingsManager()->RegisterSettingsHandler(this);
   settings->RegisterCallback(this, settingNames);
+
+  if (m_iInstances == 0)
+  {
+    // statics must only be registered once, not per instance
+    settings->GetSettingsManager()->RegisterSettingOptionsFiller("pvrrecordmargins", MarginTimeFiller);
+    settings->GetSettingsManager()->AddDynamicCondition("pvrsettingvisible", IsSettingVisible);
+    settings->GetSettingsManager()->AddDynamicCondition("checkpvrparentalpin", CheckParentalPin);
+  }
+  m_iInstances++;
 }
 
 CPVRSettings::~CPVRSettings()
 {
   const std::shared_ptr<CSettings> settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+
+  m_iInstances--;
+  if (m_iInstances == 0)
+  {
+    settings->GetSettingsManager()->RemoveDynamicCondition("checkpvrparentalpin");
+    settings->GetSettingsManager()->RemoveDynamicCondition("pvrsettingvisible");
+    settings->GetSettingsManager()->UnregisterSettingOptionsFiller("pvrrecordmargins");
+  }
+
   settings->UnregisterCallback(this);
   settings->GetSettingsManager()->UnregisterSettingsHandler(this);
 }
@@ -122,7 +148,7 @@ std::string CPVRSettings::GetStringValue(const std::string &settingName) const
 }
 
 void CPVRSettings::MarginTimeFiller(
-  SettingConstPtr  /*setting*/, std::vector< std::pair<std::string, int> > &list, int &current, void * /*data*/)
+  SettingConstPtr  /*setting*/, std::vector<IntegerSettingOption> &list, int &current, void * /*data*/)
 {
   list.clear();
 
@@ -134,7 +160,7 @@ void CPVRSettings::MarginTimeFiller(
   for (int iValue : marginTimeValues)
   {
     list.push_back(
-      std::make_pair(StringUtils::Format(g_localizeStrings.Get(14044).c_str(), iValue) /* %i min */, iValue));
+      IntegerSettingOption(StringUtils::Format(g_localizeStrings.Get(14044).c_str(), iValue) /* %i min */, iValue));
   }
 }
 
@@ -160,4 +186,9 @@ bool CPVRSettings::IsSettingVisible(const std::string &condition, const std::str
     // Show all other settings unconditionally.
     return true;
   }
+}
+
+bool CPVRSettings::CheckParentalPin(const std::string &condition, const std::string &value, std::shared_ptr<const CSetting> setting, void *data)
+{
+  return CServiceBroker::GetPVRManager().GUIActions()->CheckParentalPIN() == ParentalCheckResult::SUCCESS;
 }

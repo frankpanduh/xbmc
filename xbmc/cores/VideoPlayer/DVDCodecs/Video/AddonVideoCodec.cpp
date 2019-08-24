@@ -7,12 +7,13 @@
  */
 
 #include "AddonVideoCodec.h"
+
 #include "addons/binary-addons/BinaryAddonBase.h"
+#include "cores/VideoPlayer/DVDCodecs/DVDCodecs.h"
 #include "cores/VideoPlayer/DVDStreamInfo.h"
 #include "cores/VideoPlayer/Interface/Addon/DemuxCrypto.h"
-#include "cores/VideoPlayer/DVDCodecs/DVDCodecs.h"
-#include "cores/VideoPlayer/Process/VideoBuffer.h"
 #include "cores/VideoPlayer/Interface/Addon/TimingConstants.h"
+#include "cores/VideoPlayer/Process/VideoBuffer.h"
 #include "utils/log.h"
 
 using namespace kodi::addon;
@@ -32,7 +33,6 @@ CAddonVideoCodec::CAddonVideoCodec(CProcessInfo &processInfo, ADDON::BinaryAddon
     CLog::Log(LOGERROR, "CInputStreamAddon: Failed to create add-on instance for '%s'", addonInfo->ID().c_str());
     return;
   }
-  m_processInfo.SetVideoDecoderName(GetName(), false);
 }
 
 CAddonVideoCodec::~CAddonVideoCodec()
@@ -142,7 +142,10 @@ bool CAddonVideoCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options)
   if (!CopyToInitData(initData, hints))
     return false;
 
-  return m_struct.toAddon.open(&m_struct, &initData);
+  bool ret = m_struct.toAddon.open(&m_struct, &initData);
+  m_processInfo.SetVideoDecoderName(GetName(), false);
+
+  return ret;
 }
 
 bool CAddonVideoCodec::Reconfigure(CDVDStreamInfo &hints)
@@ -189,7 +192,7 @@ CDVDVideoCodec::VCReturn CAddonVideoCodec::GetPicture(VideoPicture* pVideoPictur
     pVideoPicture->iFlags = 0;
     pVideoPicture->chroma_position = 0;
     pVideoPicture->colorBits = 8;
-    pVideoPicture->color_primaries = 0;
+    pVideoPicture->color_primaries = AVColorPrimaries::AVCOL_PRI_UNSPECIFIED;
     pVideoPicture->color_range = 0;
     pVideoPicture->color_space = AVCOL_SPC_UNSPECIFIED;
     pVideoPicture->color_transfer = 0;

@@ -7,6 +7,7 @@
  */
 
 #include "ServiceBroker.h"
+
 #include "Application.h"
 #include "profiles/ProfileManager.h"
 #include "settings/SettingsComponent.h"
@@ -250,4 +251,15 @@ void CServiceBroker::RegisterAppPort(std::shared_ptr<CAppInboundProtocol> port)
 void CServiceBroker::UnregisterAppPort()
 {
   m_pAppPort.reset();
+}
+
+CDecoderFilterManager* CServiceBroker::m_decoderFilterManager = nullptr;
+void CServiceBroker::RegisterDecoderFilterManager(CDecoderFilterManager* manager)
+{
+  m_decoderFilterManager = manager;
+}
+
+CDecoderFilterManager* CServiceBroker::GetDecoderFilterManager()
+{
+  return m_decoderFilterManager;
 }

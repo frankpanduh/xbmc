@@ -7,16 +7,18 @@
  */
 
 #include "MusicDatabaseDirectory.h"
-#include "utils/URIUtils.h"
-#include "MusicDatabaseDirectory/QueryParams.h"
-#include "music/MusicDatabase.h"
-#include "filesystem/File.h"
+
 #include "FileItem.h"
-#include "utils/Crc32.h"
-#include "guilib/TextureManager.h"
+#include "MusicDatabaseDirectory/QueryParams.h"
+#include "ServiceBroker.h"
+#include "filesystem/File.h"
 #include "guilib/LocalizeStrings.h"
+#include "guilib/TextureManager.h"
+#include "music/MusicDatabase.h"
+#include "utils/Crc32.h"
 #include "utils/LegacyPathTranslation.h"
 #include "utils/StringUtils.h"
+#include "utils/URIUtils.h"
 
 using namespace XFILE;
 using namespace MUSICDATABASEDIRECTORY;
@@ -40,11 +42,11 @@ bool CMusicDatabaseDirectory::GetDirectory(const CURL& url, CFileItemList &items
   for (int i=0;i<items.Size();++i)
   {
     CFileItemPtr item = items[i];
-    if (item->m_bIsFolder && !item->HasIcon() && !item->HasArt("thumb"))
+    if (item->m_bIsFolder && !item->HasArt("icon") && !item->HasArt("thumb"))
     {
       std::string strImage = GetIcon(item->GetPath());
       if (!strImage.empty() && CServiceBroker::GetGUI()->GetTextureManager().HasTexture(strImage))
-        item->SetIconImage(strImage);
+        item->SetArt("icon", strImage);
     }
   }
   items.SetLabel(pNode->GetLocalizedName());

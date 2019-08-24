@@ -8,34 +8,34 @@
  */
 
 #include "AddonCallbacksGUI.h"
+
 #include "AddonGUIRenderingControl.h"
 #include "AddonGUIWindow.h"
-
 #include "Application.h"
 #include "FileItem.h"
 #include "ServiceBroker.h"
 #include "addons/Addon.h"
 #include "addons/Skin.h"
-#include "dialogs/GUIDialogNumeric.h"
 #include "dialogs/GUIDialogFileBrowser.h"
-#include "dialogs/GUIDialogTextViewer.h"
+#include "dialogs/GUIDialogNumeric.h"
 #include "dialogs/GUIDialogSelect.h"
+#include "dialogs/GUIDialogTextViewer.h"
 #include "filesystem/File.h"
 #include "guilib/GUIComponent.h"
-#include "guilib/GUIWindowManager.h"
-#include "guilib/GUISpinControlEx.h"
-#include "guilib/GUIRadioButtonControl.h"
-#include "guilib/GUISettingsSliderControl.h"
-#include "guilib/GUIProgressControl.h"
-#include "guilib/GUIRenderingControl.h"
 #include "guilib/GUIKeyboardFactory.h"
+#include "guilib/GUIProgressControl.h"
+#include "guilib/GUIRadioButtonControl.h"
+#include "guilib/GUIRenderingControl.h"
+#include "guilib/GUISettingsSliderControl.h"
+#include "guilib/GUISpinControlEx.h"
+#include "guilib/GUIWindowManager.h"
 #include "messaging/ApplicationMessenger.h"
 #include "messaging/helpers/DialogHelper.h"
 #include "messaging/helpers/DialogOKHelper.h"
-#include "utils/log.h"
-#include "utils/URIUtils.h"
 #include "utils/StringUtils.h"
+#include "utils/URIUtils.h"
 #include "utils/Variant.h"
+#include "utils/log.h"
 
 using namespace KODI::MESSAGING;
 using KODI::MESSAGING::HELPERS::DialogResponse;
@@ -122,8 +122,6 @@ CAddonCallbacksGUI::CAddonCallbacksGUI(CAddon* addon)
   m_callbacks->ListItem_SetLabel              = CAddonCallbacksGUI::ListItem_SetLabel;
   m_callbacks->ListItem_GetLabel2             = CAddonCallbacksGUI::ListItem_GetLabel2;
   m_callbacks->ListItem_SetLabel2             = CAddonCallbacksGUI::ListItem_SetLabel2;
-  m_callbacks->ListItem_SetIconImage          = CAddonCallbacksGUI::ListItem_SetIconImage;
-  m_callbacks->ListItem_SetThumbnailImage     = CAddonCallbacksGUI::ListItem_SetThumbnailImage;
   m_callbacks->ListItem_SetInfo               = CAddonCallbacksGUI::ListItem_SetInfo;
   m_callbacks->ListItem_SetProperty           = CAddonCallbacksGUI::ListItem_SetProperty;
   m_callbacks->ListItem_GetProperty           = CAddonCallbacksGUI::ListItem_GetProperty;
@@ -267,8 +265,8 @@ GUIHANDLE CAddonCallbacksGUI::Window_New(void *addonData, const char *xmlFilenam
   {
     //FIXME make this static method of current skin?
     std::string str("none");
-    CAddonInfo addonInfo(str, ADDON_SKIN);
-    addonInfo.SetPath(URIUtils::AddFileToFolder(
+    AddonInfoPtr addonInfo = std::make_shared<CAddonInfo>(str, ADDON_SKIN);
+    addonInfo->SetPath(URIUtils::AddFileToFolder(
       guiHelper->m_addon->Path(),
       "resources",
       "skins",
@@ -276,7 +274,7 @@ GUIHANDLE CAddonCallbacksGUI::Window_New(void *addonData, const char *xmlFilenam
 
     std::shared_ptr<CSkinInfo> skinInfo = std::make_shared<ADDON::CSkinInfo>(addonInfo);
     skinInfo->Start();
-    strSkinPath = skinInfo->GetSkinPath(xmlFilename, &res, addonInfo.Path());
+    strSkinPath = skinInfo->GetSkinPath(xmlFilename, &res, addonInfo->Path());
 
     if (!XFILE::CFile::Exists(strSkinPath))
     {
@@ -1495,7 +1493,7 @@ GUIHANDLE CAddonCallbacksGUI::ListItem_Create(void *addonData, const char *label
   if (label2)
     pItem->SetLabel2(label2);
   if (iconImage)
-    pItem->SetIconImage(iconImage);
+    pItem->SetArt("icon", iconImage);
   if (thumbnailImage)
     pItem->SetArt("thumb", thumbnailImage);
   if (path)
@@ -1545,24 +1543,6 @@ void CAddonCallbacksGUI::ListItem_SetLabel2(void *addonData, GUIHANDLE handle, c
     return;
 
   static_cast<CFileItem*>(handle)->SetLabel2(label);
-}
-
-void CAddonCallbacksGUI::ListItem_SetIconImage(void *addonData, GUIHANDLE handle, const char *image)
-{
-  CAddonInterfaces* helper = (CAddonInterfaces*) addonData;
-  if (!helper || !handle)
-    return;
-
-  static_cast<CFileItem*>(handle)->SetIconImage(image);
-}
-
-void CAddonCallbacksGUI::ListItem_SetThumbnailImage(void *addonData, GUIHANDLE handle, const char *image)
-{
-  CAddonInterfaces* helper = (CAddonInterfaces*) addonData;
-  if (!helper || !handle)
-    return;
-
-  static_cast<CFileItem*>(handle)->SetArt("thumb", image);
 }
 
 void CAddonCallbacksGUI::ListItem_SetInfo(void *addonData, GUIHANDLE handle, const char *info)

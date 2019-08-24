@@ -8,34 +8,32 @@
 
 #include "GUIControllerList.h"
 
-#include <algorithm>
-#include <assert.h>
-#include <iterator>
-
 #include "GUIControllerDefines.h"
 #include "GUIControllerWindow.h"
 #include "GUIFeatureList.h"
+#include "ServiceBroker.h"
 #include "addons/AddonManager.h"
 #include "dialogs/GUIDialogYesNo.h"
-#include "games/addons/input/GameClientInput.h"
+#include "games/GameServices.h"
 #include "games/addons/GameClient.h"
-#include "games/controllers/types/ControllerTree.h"
+#include "games/addons/input/GameClientInput.h"
 #include "games/controllers/Controller.h"
 #include "games/controllers/ControllerIDs.h"
-#include "games/controllers/ControllerFeature.h"
 #include "games/controllers/ControllerLayout.h"
 #include "games/controllers/guicontrols/GUIControllerButton.h"
 #include "games/controllers/guicontrols/GUIGameController.h"
-#include "games/GameServices.h"
-#include "guilib/GUIMessage.h"
+#include "games/controllers/types/ControllerTree.h"
 #include "guilib/GUIButtonControl.h"
 #include "guilib/GUIControlGroupList.h"
+#include "guilib/GUIMessage.h"
 #include "guilib/GUIWindow.h"
-#include "guilib/WindowIDs.h"
 #include "messaging/ApplicationMessenger.h"
 #include "peripherals/Peripherals.h"
 #include "utils/StringUtils.h"
-#include "ServiceBroker.h"
+
+#include <algorithm>
+#include <assert.h>
+#include <iterator>
 
 using namespace KODI;
 using namespace ADDON;
@@ -61,7 +59,7 @@ bool CGUIControllerList::Initialize(void)
     m_controllerButton->SetVisible(false);
 
   CServiceBroker::GetAddonMgr().Events().Subscribe(this, &CGUIControllerList::OnEvent);
-  Refresh();
+  Refresh("");
 
   return m_controllerList != nullptr &&
          m_controllerButton != nullptr;
@@ -77,8 +75,17 @@ void CGUIControllerList::Deinitialize(void)
   m_controllerButton = nullptr;
 }
 
-bool CGUIControllerList::Refresh(void)
+bool CGUIControllerList::Refresh(const std::string& controllerId)
 {
+  // Focus specified controller after refresh
+  std::string focusController = controllerId;
+
+  if (focusController.empty() && m_focusedController >= 0)
+  {
+    // If controller ID wasn't provided, focus current controller
+    focusController = m_controllers[m_focusedController]->ID();
+  }
+
   if (!RefreshControllers())
     return false;
 
@@ -87,12 +94,16 @@ bool CGUIControllerList::Refresh(void)
   if (m_controllerList)
   {
     unsigned int buttonId = 0;
-    for (ControllerVector::const_iterator it = m_controllers.begin(); it != m_controllers.end(); ++it)
+    for (const auto& controller : m_controllers)
     {
-      const ControllerPtr& controller = *it;
-
       CGUIButtonControl* pButton = new CGUIControllerButton(*m_controllerButton, controller->Layout().Label(), buttonId++);
       m_controllerList->AddControl(pButton);
+
+      if (!focusController.empty() && controller->ID() == focusController)
+      {
+        CGUIMessage msg(GUI_MSG_SETFOCUS, m_guiWindow->GetID(), pButton->GetID());
+        m_guiWindow->OnMessage(msg);
+      }
 
       // Just in case
       if (buttonId >= MAX_CONTROLLER_COUNT)
@@ -148,11 +159,19 @@ void CGUIControllerList::ResetController(void)
 
 void CGUIControllerList::OnEvent(const ADDON::AddonEvent& event)
 {
-  if (typeid(event) == typeid(ADDON::AddonEvents::ReInstalled) ||
+  if (typeid(event) == typeid(ADDON::AddonEvents::Enabled) ||  // also called on install,
+      typeid(event) == typeid(ADDON::AddonEvents::Disabled) || // not called on uninstall
+      typeid(event) == typeid(ADDON::AddonEvents::ReInstalled) ||
       typeid(event) == typeid(ADDON::AddonEvents::UnInstalled))
   {
     using namespace MESSAGING;
     CGUIMessage msg(GUI_MSG_REFRESH_LIST, m_guiWindow->GetID(), CONTROL_CONTROLLER_LIST);
+
+    // Focus installed add-on
+    if (typeid(event) == typeid(ADDON::AddonEvents::Enabled) ||
+        typeid(event) == typeid(ADDON::AddonEvents::ReInstalled))
+      msg.SetStringParam(event.id);
+
     CApplicationMessenger::GetInstance().SendGUIMessage(msg, m_guiWindow->GetID());
   }
 }

@@ -10,8 +10,8 @@
 
 #include <array>
 #include <set>
-#include <string>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #include <EGL/egl.h>
@@ -153,6 +153,11 @@ public:
     return m_attributes.data();
   }
 
+  int Size() const
+  {
+    return m_writePosition;
+  }
+
 private:
   std::array<EGLint, AttributeCount * 2 + 1> m_attributes;
   int m_writePosition{};
@@ -168,7 +173,7 @@ public:
   CEGLContextUtils(EGLenum platform, std::string const& platformExtension);
   ~CEGLContextUtils();
 
-  bool CreateDisplay(EGLNativeDisplayType nativeDisplay, EGLint renderableType, EGLint renderingApi);
+  bool CreateDisplay(EGLNativeDisplayType nativeDisplay);
   /**
    * Create EGLDisplay with EGL_EXT_platform_base
    *
@@ -180,10 +185,12 @@ public:
    * \param nativeDisplay native display to use with eglGetPlatformDisplayEXT
    * \param nativeDisplayLegacy native display to use with eglGetDisplay
    */
-  bool CreatePlatformDisplay(void* nativeDisplay, EGLNativeDisplayType nativeDisplayLegacy, EGLint renderableType, EGLint renderingApi, EGLint visualId = 0);
+  bool CreatePlatformDisplay(void* nativeDisplay, EGLNativeDisplayType nativeDisplayLegacy);
 
   bool CreateSurface(EGLNativeWindowType nativeWindow);
   bool CreatePlatformSurface(void* nativeWindow, EGLNativeWindowType nativeWindowLegacy);
+  bool InitializeDisplay(EGLint renderingApi);
+  bool ChooseConfig(EGLint renderableType, EGLint visualId = 0);
   bool CreateContext(CEGLAttributesVec contextAttribs);
   bool BindContext();
   void Destroy();
@@ -192,6 +199,7 @@ public:
   bool SetVSync(bool enable);
   bool TrySwapBuffers();
   bool IsPlatformSupported() const;
+  EGLint GetConfigAttrib(EGLint attribute) const;
 
   EGLDisplay GetEGLDisplay() const
   {
@@ -211,8 +219,6 @@ public:
   }
 
 private:
-  bool InitializeDisplay(EGLint renderableType, EGLint renderingApi, EGLint visualId = 0);
-  bool ChooseConfig(EGLint renderableType, EGLint visualId);
   void SurfaceAttrib();
 
   EGLenum m_platform{EGL_NONE};

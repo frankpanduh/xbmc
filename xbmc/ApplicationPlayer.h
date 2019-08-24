@@ -8,15 +8,15 @@
 
 #pragma once
 
-#include <memory>
-#include <string>
-#include <vector>
-
+#include "SeekHandler.h"
+#include "cores/IPlayer.h"
 #include "threads/CriticalSection.h"
 #include "threads/SystemClock.h"
 #include "windowing/Resolution.h"
-#include "cores/IPlayer.h"
-#include "SeekHandler.h"
+
+#include <memory>
+#include <string>
+#include <vector>
 
 class CAction;
 class CPlayerCoreFactory;
@@ -151,6 +151,11 @@ public:
   CSeekHandler& GetSeekHandler();
 
   void SetUpdateStreamDetails();
+
+  /*!
+   * \copydoc IPlayer::HasGameAgent
+   */
+  bool HasGameAgent();
 
 private:
   std::shared_ptr<IPlayer> GetInternal() const;

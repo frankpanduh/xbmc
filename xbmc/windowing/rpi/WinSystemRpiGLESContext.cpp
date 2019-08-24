@@ -6,20 +6,24 @@
  *  See LICENSES/README.md for more information.
  */
 
-#include "Application.h"
-#include "VideoSyncPi.h"
 #include "WinSystemRpiGLESContext.h"
-#include "guilib/GUIComponent.h"
-#include "guilib/GUIWindowManager.h"
+
+#include "Application.h"
 #include "ServiceBroker.h"
-#include "utils/log.h"
+#include "VideoSyncPi.h"
 #include "cores/RetroPlayer/process/rbpi/RPProcessInfoPi.h"
 #include "cores/RetroPlayer/rendering/VideoRenderers/RPRendererOpenGLES.h"
 #include "cores/VideoPlayer/DVDCodecs/DVDFactoryCodec.h"
-#include "cores/VideoPlayer/DVDCodecs/Video/MMALFFmpeg.h"
 #include "cores/VideoPlayer/DVDCodecs/Video/MMALCodec.h"
-#include "cores/VideoPlayer/VideoRenderers/RenderFactory.h"
+#include "cores/VideoPlayer/DVDCodecs/Video/MMALFFmpeg.h"
 #include "cores/VideoPlayer/Process/rbpi/ProcessInfoPi.h"
+#include "cores/VideoPlayer/VideoRenderers/RenderFactory.h"
+#include "guilib/GUIComponent.h"
+#include "guilib/GUIWindowManager.h"
+#include "rendering/gles/ScreenshotSurfaceGLES.h"
+#include "utils/log.h"
+
+#include "platform/linux/ScreenshotSurfaceRBP.h"
 
 using namespace KODI;
 
@@ -37,9 +41,17 @@ bool CWinSystemRpiGLESContext::InitWindowSystem()
     return false;
   }
 
-  if (!m_pGLContext.CreateDisplay(m_nativeDisplay,
-                                  EGL_OPENGL_ES2_BIT,
-                                  EGL_OPENGL_ES_API))
+  if (!m_pGLContext.CreateDisplay(m_nativeDisplay))
+  {
+    return false;
+  }
+
+  if (!m_pGLContext.InitializeDisplay(EGL_OPENGL_ES_API))
+  {
+    return false;
+  }
+
+  if (!m_pGLContext.ChooseConfig(EGL_OPENGL_ES2_BIT))
   {
     return false;
   }
@@ -61,6 +73,8 @@ bool CWinSystemRpiGLESContext::InitWindowSystem()
   MMAL::CMMALVideo::Register();
   VIDEOPLAYER::CRendererFactory::ClearRenderer();
   MMAL::CMMALRenderer::Register();
+  CScreenshotSurfaceGLES::Register();
+  CScreenshotSurfaceRBP::Register();
 
   return true;
 }
@@ -117,10 +131,8 @@ bool CWinSystemRpiGLESContext::SetFullScreen(bool fullScreen, RESOLUTION_INFO& r
 
 void CWinSystemRpiGLESContext::SetVSyncImpl(bool enable)
 {
-  m_iVSyncMode = enable ? 10:0;
   if (!m_pGLContext.SetVSync(enable))
   {
-    m_iVSyncMode = 0;
     CLog::Log(LOGERROR, "%s,Could not set egl vsync", __FUNCTION__);
   }
 }

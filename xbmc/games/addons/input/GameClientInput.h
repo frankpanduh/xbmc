@@ -9,8 +9,8 @@
 #pragma once
 
 #include "games/addons/GameClientSubsystem.h"
-#include "games/controllers/types/ControllerTree.h"
 #include "games/controllers/ControllerTypes.h"
+#include "games/controllers/types/ControllerTree.h"
 #include "peripherals/PeripheralTypes.h"
 #include "utils/Observer.h"
 
@@ -31,6 +31,7 @@ namespace JOYSTICK
 namespace GAME
 {
   class CGameClient;
+  class CGameClientController;
   class CGameClientHardware;
   class CGameClientJoystick;
   class CGameClientKeyboard;
@@ -63,6 +64,9 @@ namespace GAME
     bool SupportsKeyboard() const;
     bool SupportsMouse() const;
 
+    // Agent functions
+    bool HasAgent() const;
+
     // Keyboard functions
     bool OpenKeyboard(const ControllerPtr &controller);
     void CloseKeyboard();
@@ -91,6 +95,7 @@ namespace GAME
 
     // Private input helpers
     void LoadTopology();
+    void SetControllerLayouts(const ControllerVector &controllers);
     void ProcessJoysticks();
     PortMap MapJoysticks(const PERIPHERALS::PeripheralVector &peripheralJoysticks,
                          const JoystickMap &gameClientjoysticks) const;
@@ -105,6 +110,8 @@ namespace GAME
     // Input properties
     IGameInputCallback *m_inputCallback = nullptr;
     std::unique_ptr<CGameClientTopology> m_topology;
+    using ControllerLayoutMap = std::map<std::string, std::unique_ptr<CGameClientController>>;
+    ControllerLayoutMap m_controllerLayouts;
     JoystickMap m_joysticks;
     PortMap m_portMap;
     std::unique_ptr<CGameClientKeyboard> m_keyboard;

@@ -8,9 +8,9 @@
 
 #pragma once
 
-#include "input/joysticks/interfaces/IKeyHandler.h"
+#include "input/actions/Action.h"
 #include "input/joysticks/JoystickTypes.h"
-#include "input/Action.h"
+#include "input/joysticks/interfaces/IKeyHandler.h"
 
 #include <map>
 #include <string>

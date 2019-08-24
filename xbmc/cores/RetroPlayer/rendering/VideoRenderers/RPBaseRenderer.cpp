@@ -7,6 +7,7 @@
  */
 
 #include "RPBaseRenderer.h"
+
 #include "cores/RetroPlayer/buffers/IRenderBuffer.h"
 #include "cores/RetroPlayer/buffers/IRenderBufferPool.h"
 #include "cores/RetroPlayer/rendering/RenderContext.h"
@@ -36,10 +37,7 @@ CRPBaseRenderer::~CRPBaseRenderer()
 
 bool CRPBaseRenderer::IsCompatible(const CRenderVideoSettings &settings) const
 {
-  if (!m_bufferPool->IsCompatible(settings))
-    return false;
-
-  return true;
+  return m_bufferPool->IsCompatible(settings);
 }
 
 bool CRPBaseRenderer::Configure(AVPixelFormat format)
@@ -70,10 +68,7 @@ void CRPBaseRenderer::FrameMove()
 
 bool CRPBaseRenderer::IsVisible() const
 {
-  if (m_renderFrameCount <= m_lastRender + VISIBLE_DURATION_FRAME_COUNT)
-    return true;
-
-  return false;
+  return m_renderFrameCount <= m_lastRender + VISIBLE_DURATION_FRAME_COUNT;
 }
 
 void CRPBaseRenderer::SetBuffer(IRenderBuffer *buffer)

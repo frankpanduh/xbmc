@@ -7,20 +7,21 @@
  */
 
 #include "ButtonMapping.h"
+
+#include "ServiceBroker.h"
 #include "games/controllers/Controller.h"
 #include "games/controllers/ControllerFeature.h"
 #include "games/controllers/ControllerManager.h"
-#include "input/joysticks/interfaces/IButtonMap.h"
-#include "input/joysticks/interfaces/IButtonMapper.h"
+#include "input/IKeymap.h"
+#include "input/InputTranslator.h"
+#include "input/Key.h"
 #include "input/joysticks/DriverPrimitive.h"
 #include "input/joysticks/JoystickTranslator.h"
 #include "input/joysticks/JoystickUtils.h"
-#include "input/InputTranslator.h"
-#include "input/IKeymap.h"
-#include "input/Key.h"
+#include "input/joysticks/interfaces/IButtonMap.h"
+#include "input/joysticks/interfaces/IButtonMapper.h"
 #include "threads/SystemClock.h"
 #include "utils/log.h"
-#include "ServiceBroker.h"
 
 #include <algorithm>
 #include <assert.h>
@@ -531,7 +532,7 @@ CAxisDetector& CButtonMapping::GetAxis(unsigned int axisIndex,
     }
 
     // Report axis
-    CLog::Log(LOGDEBUG, "Axis %u discovered at position %.04f after %lu frames",
+    CLog::Log(LOGDEBUG, "Axis %u discovered at position %.4f after %lu frames",
               axisIndex, position, static_cast<unsigned long>(m_frameCount));
 
     m_axes.insert(std::make_pair(axisIndex, CAxisDetector(this, axisIndex, config)));

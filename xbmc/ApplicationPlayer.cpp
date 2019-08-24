@@ -7,15 +7,16 @@
  */
 
 #include "ApplicationPlayer.h"
-#include "cores/DataCacheCore.h"
-#include "cores/IPlayer.h"
-#include "cores/playercorefactory/PlayerCoreFactory.h"
-#include "cores/VideoPlayer/VideoPlayer.h"
-#include "guilib/GUIComponent.h"
-#include "guilib/GUIWindowManager.h"
+
 #include "Application.h"
 #include "PlayListPlayer.h"
 #include "ServiceBroker.h"
+#include "cores/DataCacheCore.h"
+#include "cores/IPlayer.h"
+#include "cores/VideoPlayer/VideoPlayer.h"
+#include "cores/playercorefactory/PlayerCoreFactory.h"
+#include "guilib/GUIComponent.h"
+#include "guilib/GUIWindowManager.h"
 #include "settings/MediaSettings.h"
 
 CApplicationPlayer::CApplicationPlayer()
@@ -1009,4 +1010,13 @@ void CApplicationPlayer::SetUpdateStreamDetails()
   CVideoPlayer* vp = dynamic_cast<CVideoPlayer*>(player.get());
   if (vp)
     vp->SetUpdateStreamDetails();
+}
+
+bool CApplicationPlayer::HasGameAgent()
+{
+  std::shared_ptr<IPlayer> player = GetInternal();
+  if (player)
+    return player->HasGameAgent();
+
+  return false;
 }

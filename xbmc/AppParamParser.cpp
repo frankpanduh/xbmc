@@ -7,11 +7,14 @@
  */
 
 #include "AppParamParser.h"
+
+#include "CompileInfo.h"
 #include "FileItem.h"
 #include "settings/AdvancedSettings.h"
-#include "utils/log.h"
-#include "utils/SystemInfo.h"
 #include "utils/StringUtils.h"
+#include "utils/SystemInfo.h"
+#include "utils/log.h"
+
 #include <stdlib.h>
 
 CAppParamParser::CAppParamParser()
@@ -40,7 +43,8 @@ void CAppParamParser::Parse(const char* const* argv, int nArgs)
 void CAppParamParser::DisplayVersion()
 {
   printf("%s Media Center %s\n", CSysInfo::GetVersion().c_str(), CSysInfo::GetAppName().c_str());
-  printf("Copyright (C) 2005-2013 Team %s - http://kodi.tv\n", CSysInfo::GetAppName().c_str());
+  printf("Copyright (C) %s Team %s - http://kodi.tv\n",
+         CCompileInfo::GetCopyrightYears(), CSysInfo::GetAppName().c_str());
   exit(0);
 }
 

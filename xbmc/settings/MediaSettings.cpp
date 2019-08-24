@@ -6,30 +6,32 @@
  *  See LICENSES/README.md for more information.
  */
 
-#include <string>
-
-#include <limits.h>
-
 #include "MediaSettings.h"
+
 #include "Application.h"
 #include "PlayListPlayer.h"
-#include "dialogs/GUIDialogContextMenu.h"
+#include "ServiceBroker.h"
+#include "cores/RetroPlayer/RetroPlayerUtils.h"
 #include "dialogs/GUIDialogFileBrowser.h"
-#include "settings/dialogs/GUIDialogLibExportSettings.h"
 #include "guilib/LocalizeStrings.h"
+#include "interfaces/AnnouncementManager.h"
 #include "interfaces/builtins/Builtins.h"
-#include "music/MusicDatabase.h"
-#include "music/MusicLibraryQueue.h"
 #include "messaging/helpers/DialogHelper.h"
-#include "settings/lib/Setting.h"
+#include "music/MusicLibraryQueue.h"
 #include "settings/Settings.h"
+#include "settings/dialogs/GUIDialogLibExportSettings.h"
+#include "settings/lib/Setting.h"
 #include "storage/MediaManager.h"
 #include "threads/SingleLock.h"
 #include "utils/StringUtils.h"
+#include "utils/Variant.h"
 #include "utils/XBMCTinyXML.h"
 #include "utils/XMLUtils.h"
-#include "utils/Variant.h"
+#include "utils/log.h"
 #include "video/VideoDatabase.h"
+
+#include <limits.h>
+#include <string>
 
 using namespace KODI;
 using namespace KODI::MESSAGING;
@@ -126,9 +128,12 @@ bool CMediaSettings::Load(const TiXmlNode *settings)
     if (XMLUtils::GetString(pElement, "videofilter", videoFilter))
       m_defaultGameSettings.SetVideoFilter(videoFilter);
 
-    int stretchMode;
-    if (XMLUtils::GetInt(pElement, "stretchmode", stretchMode, static_cast<int>(RETRO::STRETCHMODE::Normal), static_cast<int>(RETRO::STRETCHMODE::Max)))
-      m_defaultGameSettings.SetStretchMode(static_cast<RETRO::STRETCHMODE>(stretchMode));
+    std::string stretchMode;
+    if (XMLUtils::GetString(pElement, "stretchmode", stretchMode))
+    {
+      RETRO::STRETCHMODE sm = RETRO::CRetroPlayerUtils::IdentifierToStretchMode(stretchMode);
+      m_defaultGameSettings.SetStretchMode(sm);
+    }
 
     int rotation;
     if (XMLUtils::GetInt(pElement, "rotation", rotation, 0, 270) && rotation >= 0)
@@ -229,7 +234,8 @@ bool CMediaSettings::Save(TiXmlNode *settings) const
     return false;
 
   XMLUtils::SetString(pNode, "videofilter", m_defaultGameSettings.VideoFilter());
-  XMLUtils::SetInt(pNode, "stretchmode", static_cast<int>(m_defaultGameSettings.StretchMode()));
+  std::string sm = RETRO::CRetroPlayerUtils::StretchModeToIdentifier(m_defaultGameSettings.StretchMode());
+  XMLUtils::SetString(pNode, "stretchmode", sm);
   XMLUtils::SetInt(pNode, "rotation", m_defaultGameSettings.RotationDegCCW());
 
   // mymusic
@@ -308,10 +314,8 @@ void CMediaSettings::OnSettingAction(std::shared_ptr<const CSetting> setting)
 
     if (CGUIDialogFileBrowser::ShowAndGetFile(shares, "musicdb.xml", g_localizeStrings.Get(651) , path))
     {
-      CMusicDatabase musicdatabase;
-      musicdatabase.Open();
-      musicdatabase.ImportFromXML(path);
-      musicdatabase.Close();
+      // Import data to music library showing progress dialog
+      CMusicLibraryQueue::GetInstance().ImportLibrary(path, true);
     }
   }
   else if (settingId == CSettings::SETTING_VIDEOLIBRARY_CLEANUP)
@@ -337,6 +341,15 @@ void CMediaSettings::OnSettingAction(std::shared_ptr<const CSetting> setting)
       videodatabase.Close();
     }
   }
+}
+
+void CMediaSettings::OnSettingChanged(std::shared_ptr<const CSetting> setting)
+{
+  if (setting == nullptr)
+    return;
+
+  if (setting->GetId() == CSettings::SETTING_VIDEOLIBRARY_SHOWUNWATCHEDPLOTS)
+    CServiceBroker::GetAnnouncementManager()->Announce(ANNOUNCEMENT::VideoLibrary, "xbmc", "OnRefresh");
 }
 
 int CMediaSettings::GetWatchedMode(const std::string &content) const
